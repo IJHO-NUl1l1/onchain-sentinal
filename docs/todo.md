@@ -17,8 +17,11 @@
 
 ## Phase A — 셋업 & 검증 (D1-2)
 
-- [ ] KeeperHub 계정 생성 + Turnkey 지갑 확인
-- [ ] `claude mcp add` 로 MCP 연결 + `/mcp` OAuth 완료
+- [~] KeeperHub 계정 생성 + Turnkey 지갑 확인
+      - [x] 계정 생성 + 온보딩 (8/6, 기기1)
+      - [ ] `get_wallet_integration` 로 Turnkey 지갑 주소 확보 ← 다음 작업
+- [x] `claude mcp add` 로 MCP 연결 + `/mcp` OAuth 완료 (8/6, 기기1 — `Connected to keeperhub` 확인)
+      ※ `--scope user`라 두 번째 기기에서 등록+OAuth 재실행 필요
 - [ ] MCP 툴로 워크플로우 1개 수동 생성 (`create_workflow`)
 - [ ] Sepolia/Base Sepolia 파우셋으로 테스트 자산 확보
 - [ ] **첫 트랜잭션 성공** (`execute_transfer` simulate→실행→transactionLink 확보) ★분수령
@@ -92,3 +95,5 @@
 - (예시) 8/6 데스크탑: 문서 3종 초기화, Git 세팅. 다음 = Phase A 셋업 시작.
 - 8/6: 기초 정비. `.gitignore` 복구(시크릿 보호가 안 되던 상태였음), `.gitattributes`/`.nvmrc`(24.15.0)/`.env.example`/`contracts/.gitkeep` 추가. Next 스캐폴드 빌드 통과 확인(16.3.0).
   다음 = ①두 번째 기기 clone·환경 맞추기 ②레포 구조 결정(에이전트/executor 코드가 들어갈 자리) ③Phase A KeeperHub MCP 연결(기기별로 각각 `claude mcp add` 필요).
+- 8/6: KeeperHub 계정 생성 + MCP 연결·OAuth 완료(`Connected to keeperhub`). 등록은 `--scope user`(`~/.claude.json`).
+  다음 = ①`get_wallet_integration`로 Turnkey 지갑 주소 확보 ②`tools_documentation`로 툴 목록 실사 ③Sepolia 파우셋 → 첫 tx(★분수령).
