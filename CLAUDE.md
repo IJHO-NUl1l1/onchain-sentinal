@@ -46,10 +46,18 @@
 - `network`는 **문자열 chainId** ("1", "11155111", "8453")
 - deadline 등은 템플릿 산술 말고 **미리 계산**해서 주입
 
+- `simulate`는 반대로 **JSON 불리언** `true` (문자열 아님). 실제 실행은 고유 `idempotency_key` 필요
+- 수신 주소는 **엄격한 EIP-55 체크섬** 검증 — 전부 소문자로 넘기거나 정확한 체크섬으로
+
 **Flare 컨트랙트:**
 - **EVM 버전 반드시 `cancun`** (foundry.toml / hardhat.config). 안 맞추면 컴파일/배포 실패
 - 개발은 `getTestFtsoV2()`(view, 가스無), 배포는 `getFtsoV2()`(payable)로 전환
 - Coston2 chainId는 **114**
+
+**도구/환경:**
+- **PowerShell here-string(`@'...'@`)은 Bash 툴에서 안 된다** (반대도 마찬가지). 실제로 `.gitignore`가
+  생성 명령문 그대로 기록돼 시크릿 보호가 뚫린 사고가 있었다. **파일을 만들었으면 열어서 확인하라.**
+- 슬래시 명령(`/mcp` 등)은 Claude Code 안에서 치는 것. 터미널에 치면 `CommandNotFoundException`.
 
 ---
 
@@ -74,7 +82,14 @@
 
 - 모든 코드/문서는 Git으로 동기화. 작업 전 `git pull`, 작업 후 `git push`.
 - 세션 시작 시 `docs/todo.md`를 먼저 읽어 상대 기기가 어디까지 했는지 확인하라.
-- Node 버전(`.nvmrc`), EVM 버전(cancun) 등 환경을 두 기기에서 동일하게 유지.
+- Node 버전(`.nvmrc` = 24.15.0), EVM 버전(cancun) 등 환경을 두 기기에서 동일하게 유지.
+
+**git이 안 옮겨주는 것 — 기기마다 따로 해야 한다:**
+- `.env` 실제 키값 (`.gitignore`로 차단. `copy .env.example .env` 후 안전한 경로로 값 이전)
+- KeeperHub MCP 연결 (`--scope user`라 `~/.claude.json`에 저장)
+  → `claude mcp add --transport http --scope user keeperhub https://app.keeperhub.com/mcp`
+  → **Claude Code 세션 안에서** `/mcp` 로 OAuth. `claude mcp list`로 `Connected` 확인
+- `node_modules/` → `npm install --prefix app`
 
 ---
 
