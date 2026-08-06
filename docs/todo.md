@@ -6,14 +6,20 @@
 > 상태 표기: `[ ]` 미착수 / `[~]` 진행중 / `[x]` 완료
 > 각 항목에 담당 기기와 날짜를 남기면 좋다. 예: `[x] ... (데스크탑, 8/6)`
 >
-> **새 기기에서 시작한다면 `docs/setup.md` 를 먼저 따라 할 것.** (clone·Node·MCP 연결·`.env` 절차)
+> 새 기기 세팅(clone·Node·MCP·`.env`)은 `/CLAUDE.md`의 "두 기기 개발" 참조.
 
 ---
 
-## 마감
+## 마감 · 현재 위치
+
 - 🔵 KeeperHub: **8/13 19:00** (제출 페이지 로컬 타임존 재확인 필요)
 - 🟠 Flare: **8/15 04:59** (간극 약 34h)
 - 🟣 CTC: 9/6 (8/13 이후 착수)
+
+**8/6 기준: 원안 대비 약 3~4일 지연.** 오늘이 D5인데 아직 Phase A(셋업) 진행 중이고 코드 0줄.
+개정 일정은 architecture.md 8장. 압축 포인트 = Phase B(공유 뼈대)를 5일 → **2일(8/7-8/8)**.
+
+**오늘(8/6) 반드시 할 것:** ①오피스아워(마지막 회차) ②첫 tx ③레포 구조 결정
 
 ---
 
@@ -37,15 +43,17 @@
       - [x] `.gitignore` 수정 (깨져 있던 PowerShell here-string 텍스트 → 실제 패턴, 8/6)
       - [x] `.env.example` 작성 (KeeperHub/Flare/Supabase 변수 템플릿, 8/6)
       - [x] `.gitattributes` 추가 (두 기기 줄바꿈 churn 방지, 8/6)
-      - [x] `docs/setup.md` 작성 — 기기 세팅 절차 문서화 (8/6)
-      - [ ] 두 번째 기기 clone + `.env` 값 수동 이전 (`docs/setup.md` 따라 진행)
+      - [x] 기기 세팅 절차를 `/CLAUDE.md` "두 기기 개발"에 정리 (8/6)
+      - [ ] 두 번째 기기 clone + `.env` 값 수동 이전
 - [~] 두 기기 Node 버전(`.nvmrc`) 통일
       - [x] `.nvmrc` = 24.15.0 + `app/package.json` engines 핀 (8/6)
       - [ ] 두 번째 기기에서 `nvm use` 적용 확인
 
-## Phase B — 공유 뼈대 (D3-5) 🟢
+## Phase B — 공유 뼈대 (8/7-8/8, 압축) 🟢
 
-- [ ] Next.js 대시보드 골격 (지갑 주소 등록 / 로그 뷰)
+- [ ] **⛔ 레포 구조 결정 (선행)** — 에이전트 로직 / Executor / 백엔드 몸통이 어디 사는지.
+      현재 `app/`(Next 스캐폴드) + 빈 `contracts/`뿐. **정하기 전에 코드 쓰면 두 기기 병합이 아프다**
+- [ ] Next.js 대시보드 골격 (지갑 주소 등록 / 로그 뷰) — "실행 증명"에 필요한 최소한만
 - [ ] Executor 인터페이스 정의 (`provisionMonitoring`, `execute`)
 - [ ] Agent 로직 - analyzer (지갑 조회 → 리스크 프로파일)
 - [ ] Agent 로직 - diagnoser (사건 → 진단)
@@ -53,19 +61,25 @@
 - [ ] 프롬프트 템플릿 초안
 - [ ] 액션 enum 확정 (`search_protocol_actions` 결과 + AssetVault 패턴 참고)
 
-## Phase C — KeeperHub 버전 (D6-9) 🔵
+## Phase C — KeeperHub 버전 (8/9-8/12) 🔵
+
+> **스코프 밸브** — 밀리면 버리는 순서: ①Marketplace 등록 ②Safe+Zodiac ③대시보드 완성도
+> **사수**: 첫 tx / Phase0 자동 생성 데모 / tx 해시 증빙 (이 셋이 우리 주장의 전부)
 
 - [ ] KeeperHubExecutor - `provisionMonitoring` (`create_workflow`로 감시망 생성)
 - [ ] KeeperHubExecutor - `execute` (`execute_check_and_execute` / `execute_protocol_action`)
 - [ ] Phase 0 데모: 지갑 분석 → 워크플로우 자동 생성 시연
 - [ ] Phase 2 반자동 데모: 사건 투입 → Claude 진단 → 대응
-- [ ] (선택) Marketplace 등록으로 "실제 호출 가능" 시연
-- [ ] 8/4 or 8/6 오피스아워에서 컨셉·구현 검증
+- [ ] (선택·1순위 폐기 대상) Marketplace 등록으로 "실제 호출 가능" 시연
+- [ ] **8/6 오피스아워에서 컨셉·구현 검증 ← 오늘이 마지막 회차**
 - [ ] 데모 영상 촬영 + 편집
+      ※ ⚠️ 스폰서 tx는 지갑 주소 거래목록에 안 뜬다. "지갑 열어 잔고 확인" 연출 불가.
+        **tx 해시 → Internal Transactions 탭** 구성으로 촬영할 것 (architecture.md 3장)
 - [ ] README 작성 (차별화 섹션: Hub 정적템플릿 vs AI 동적생성)
-- [ ] **KeeperHub 제출** (레포 + 영상 + 트랜잭션 링크)
+      ※ tx 해시로 검증하라는 안내 문구 필수
+- [ ] **KeeperHub 제출 (8/13 19:00)** (레포 + 영상 + **tx 해시** 링크)
 
-## Phase D — Flare 버전 (D8-14, 병렬 착수) 🟠
+## Phase D — Flare 버전 (8/11 병렬 착수 → 8/15 04:59) 🟠
 
 - [ ] flare-foundry-starter 또는 flare-hardhat-starter clone (EVM cancun 설정)
 - [ ] SentinelVault.sol 뼈대 (PriceTriggeredSafe + AssetVault 예제 기반)
