@@ -1,0 +1,36 @@
+# 두 기기(집 랩탑 / 회사 데스크탑) 사이 줄바꿈 churn 방지.
+# 레포 안에서는 항상 LF로 저장한다. 체크아웃 시 변환은 아래 규칙을 따른다.
+* text=auto eol=lf
+
+# 소스 — 전부 LF
+*.ts   text eol=lf
+*.tsx  text eol=lf
+*.js   text eol=lf
+*.mjs  text eol=lf
+*.json text eol=lf
+*.css  text eol=lf
+*.md   text eol=lf
+*.sol  text eol=lf
+*.toml text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+*.sh   text eol=lf
+.env.example text eol=lf
+
+# Windows 전용 스크립트는 CRLF 유지 (안 그러면 실행이 깨진다)
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# 바이너리 — 변환 금지
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.pdf  binary
+*.woff  binary
+*.woff2 binary
+
+# 락파일은 diff 노이즈가 크다 — 리뷰 시 접어둔다
+package-lock.json -diff linguist-generated

@@ -23,8 +23,14 @@
 - [ ] Sepolia/Base Sepolia 파우셋으로 테스트 자산 확보
 - [ ] **첫 트랜잭션 성공** (`execute_transfer` simulate→실행→transactionLink 확보) ★분수령
 - [ ] Coston2 파우셋(C2FLR) 확보 + RPC 연결 확인
-- [ ] Git 레포 생성 + 두 기기 clone + `.gitignore`/`.env.example` 세팅
-- [ ] 두 기기 Node 버전(`.nvmrc`) 통일
+- [~] Git 레포 생성 + 두 기기 clone + `.gitignore`/`.env.example` 세팅
+      - [x] `.gitignore` 수정 (깨져 있던 PowerShell here-string 텍스트 → 실제 패턴, 8/6)
+      - [x] `.env.example` 작성 (KeeperHub/Flare/Supabase 변수 템플릿, 8/6)
+      - [x] `.gitattributes` 추가 (두 기기 줄바꿈 churn 방지, 8/6)
+      - [ ] 두 번째 기기 clone + `.env` 값 수동 이전
+- [~] 두 기기 Node 버전(`.nvmrc`) 통일
+      - [x] `.nvmrc` = 24.15.0 + `app/package.json` engines 핀 (8/6)
+      - [ ] 두 번째 기기에서 `nvm use` 적용 확인
 
 ## Phase B — 공유 뼈대 (D3-5) 🟢
 
@@ -84,3 +90,5 @@
 > 각자 세션 끝날 때 한 줄씩. 무엇을 했고 다음이 뭔지.
 
 - (예시) 8/6 데스크탑: 문서 3종 초기화, Git 세팅. 다음 = Phase A 셋업 시작.
+- 8/6: 기초 정비. `.gitignore` 복구(시크릿 보호가 안 되던 상태였음), `.gitattributes`/`.nvmrc`(24.15.0)/`.env.example`/`contracts/.gitkeep` 추가. Next 스캐폴드 빌드 통과 확인(16.3.0).
+  다음 = ①두 번째 기기 clone·환경 맞추기 ②레포 구조 결정(에이전트/executor 코드가 들어갈 자리) ③Phase A KeeperHub MCP 연결(기기별로 각각 `claude mcp add` 필요).
