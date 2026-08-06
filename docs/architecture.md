@@ -285,7 +285,7 @@ claude mcp add --transport http --scope user keeperhub https://app.keeperhub.com
 ### 🔵 KeeperHub
 | 항목 | 대응 |
 |---|---|
-| 온체인 실행 | Phase1 즉시실행 + Phase2 대응 (실제 tx 링크) |
+| 온체인 실행 | Phase1 즉시실행 + Phase2 대응 ⚠️ 증빙은 **tx 해시 링크**로 (지갑 주소 목록엔 안 뜬다 — 3장 참조) |
 | KeeperHub surfaces | MCP / create_workflow / audit trail / (Marketplace 등록으로 x402·MPP) |
 | Reliability | 실행 신뢰성 KH 위임, 가스/재시도가 데모 주연 ⚠️ private routing은 스폰서십과 배타 — 둘 중 하나만 |
 | 실사용성 | "주소 하나로 시작" + Marketplace 등록으로 "실제 호출 가능" 증명 |
@@ -304,18 +304,28 @@ claude mcp add --transport http --scope user keeperhub https://app.keeperhub.com
 
 ## 8. 일정 (KeeperHub 8/13 19:00 / Flare 8/15 04:59, 간극 ~34h)
 
+**⚠️ 8/6 개정.** 원안은 D1이 8/2인 14일 계획이었고 오늘(8/6)이면 D5 — 공유 뼈대가 올라와 있어야 할 시점이다.
+실제로는 오늘에서야 D1-2(셋업)를 진행 중이고 **첫 tx 미완, 코드 0줄. 약 3~4일 지연.**
+남은 시간은 KeeperHub까지 7일. 원안의 **형태는 유지하고 앞부분(D3-5, 5일→2일)을 압축**한다.
+
 ```
-D1-2  KeeperHub 셋업(claude mcp add). MCP로 워크플로우 생성·실행. 첫 tx 성공(분수령)
-D3-5  🟢 Dashboard 골격 + Agent 로직 + Executor 인터페이스 (= Flare 두뇌도 제작 중)
-D6-7  🔵 KeeperHub Phase0 + 반자동 Phase2 확정. 8/4·8/6 오피스아워 검증
-D8-9  🔵 KeeperHub 영상+README+제출 완비
-      ▷ 병렬 착수: 🟠 SentinelVault.sol (starter kit clone, PriceTriggeredSafe 기반)
-D10-11 🟠 Vault 구현 + FTSO 통합 + Coston2 배포 + FlareExecutor
-D12(8/13 19:00) 🔵 KeeperHub 제출 → 남은시간 Flare
-D12~D14(~8/15 05:00) 🟠 Vault 마무리·배포 + Flare 영상/서면/제출
+8/6(목)  ★첫 tx 뚫기: Sepolia 파우셋 → execute_transfer simulate → 실행 → transactionHash
+         + 오피스아워(오늘이 마지막) + 레포 구조 결정(코드 쓰기 전 필수)
+8/7-8/8  🟢 공유 뼈대: Executor 인터페이스 / analyzer·diagnoser·strategist / 액션 enum 확정
+         대시보드는 "실행 증명"에 필요한 최소한만. 여기서 화려함을 좇으면 전체가 무너진다
+8/9-8/10 🔵 KeeperHub Phase0(지갑 분석 → create_workflow 자동 생성) + Phase2 반자동 데모
+8/11-8/12 🔵 영상·README·제출 준비 ▷ 병렬: 🟠 SentinelVault.sol 착수
+         여유가 나면 이 시점에 Safe+Zodiac 채택 판단 (10장)
+8/13 19:00 🔵 KeeperHub 제출 → 이후 전부 Flare
+~8/15 04:59 🟠 Vault·FTSO·Coston2 배포 + FlareExecutor + 영상/서면/제출
 ```
 
-효율 3원칙: ①두뇌 먼저 손은 어댑터로 ②KH 완성도 몰빵, Flare 스코프밸브 준비 ③문서도 코드처럼 파생. ⚠️ 34h는 마무리·배포용, contract는 D8 병렬착수로 이미 절반 진행 상태여야.
+효율 3원칙: ①두뇌 먼저 손은 어댑터로 ②KH 완성도 몰빵, Flare 스코프밸브 준비 ③문서도 코드처럼 파생. ⚠️ 34h는 마무리·배포용, contract는 8/11 병렬착수로 이미 절반 진행 상태여야.
+
+**🔵 KeeperHub 스코프 밸브 (신규 — 원안은 KH를 밸브 없이 몰빵이었으나 지연으로 필요해짐):**
+- 버리는 순서: ①Marketplace 등록 ②Safe+Zodiac ③대시보드 시각적 완성도
+- **무슨 일이 있어도 사수**: 첫 tx / Phase0 자동 생성 데모 / tx 해시 증빙
+  ↑ 이 셋이 "AI가 감시망을 설계해 배치하고 온체인에서 실행했다"는 주장의 전부다
 
 ---
 
