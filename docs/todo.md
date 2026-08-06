@@ -5,6 +5,8 @@
 >
 > 상태 표기: `[ ]` 미착수 / `[~]` 진행중 / `[x]` 완료
 > 각 항목에 담당 기기와 날짜를 남기면 좋다. 예: `[x] ... (데스크탑, 8/6)`
+>
+> **새 기기에서 시작한다면 `docs/setup.md` 를 먼저 따라 할 것.** (clone·Node·MCP 연결·`.env` 절차)
 
 ---
 
@@ -35,7 +37,8 @@
       - [x] `.gitignore` 수정 (깨져 있던 PowerShell here-string 텍스트 → 실제 패턴, 8/6)
       - [x] `.env.example` 작성 (KeeperHub/Flare/Supabase 변수 템플릿, 8/6)
       - [x] `.gitattributes` 추가 (두 기기 줄바꿈 churn 방지, 8/6)
-      - [ ] 두 번째 기기 clone + `.env` 값 수동 이전
+      - [x] `docs/setup.md` 작성 — 기기 세팅 절차 문서화 (8/6)
+      - [ ] 두 번째 기기 clone + `.env` 값 수동 이전 (`docs/setup.md` 따라 진행)
 - [~] 두 기기 Node 버전(`.nvmrc`) 통일
       - [x] `.nvmrc` = 24.15.0 + `app/package.json` engines 핀 (8/6)
       - [ ] 두 번째 기기에서 `nvm use` 적용 확인
