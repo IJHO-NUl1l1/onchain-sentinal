@@ -68,22 +68,7 @@ copy .env.example .env
 값을 채운다. 변수 설명은 `.env.example` 주석 참조.
 `.env.example`은 커밋 대상이고 `.env`는 절대 아니다 (`.gitignore`에서 `.env*` 차단 + `!.env.example` 예외).
 
-## 5. 공유되는 확정 값 (기기 무관, 참고용)
-
-- KeeperHub 실행 지갑(Turnkey EOA, 조직당 1개): `0x2b33afb068a77b103fFAF0b7d9F128209076BcE3`
-- integrationId: `5h4tgy5hy0ge3yiiwlysh`
-- 나머지 주소·함수·스키마는 전부 `architecture.md` "확정 기술 스펙"에 있다. **거기 없는 값은 지어내지 말 것.**
-
----
-
-## 매 세션 루틴
-
-1. `git pull`
-2. `docs/todo.md` 읽기 — 상대 기기가 어디까지 했는지 확인
-3. 작업
-4. `docs/todo.md` 갱신 + 작업 로그 한 줄 + 커밋 + `git push`
-
-`architecture.md`와 `todo.md`는 성격이 다른 문서다. **커밋을 섞지 마라.**
+> 지갑 주소·integrationId 같은 확정 값은 `architecture.md` "확정 기술 스펙"에만 둔다. 여기 복사하지 않는다(낡는다).
 
 ---
 
@@ -99,8 +84,4 @@ copy .env.example .env
 
 ---
 
-## 아직 안 정한 것 (기기2에서 코드 쓰기 전에 확인)
-
-- **레포 구조**: 에이전트 로직 / Executor 인터페이스 / 백엔드 몸통이 어디 사는지 미정.
-  현재는 `app/`(Next 스캐폴드)과 빈 `contracts/`뿐. **양쪽이 다르게 가정하고 코드를 쓰면 병합이 아프다.**
-- 그 외 미결 항목은 `todo.md`의 "결정 대기" 섹션 참조.
+세팅이 끝나면 `docs/todo.md`로 간다. 매 세션 루틴과 커밋 규칙은 `/CLAUDE.md`에 있다.
