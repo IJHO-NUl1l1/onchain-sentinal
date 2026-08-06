@@ -123,13 +123,24 @@ claude mcp add --transport http --scope user keeperhub https://app.keeperhub.com
 ```
 - 키: `kh_`(조직, REST/MCP용) / `wfb_`(유저, 웹훅용)
 
+**실행 지갑 (8/6 확인, 조직 내 유일):**
+- integrationId `5h4tgy5hy0ge3yiiwlysh` / 주소 `0x2b33afb068a77b103fFAF0b7d9F128209076BcE3`
+- type `web3`, `isManaged: false`, `config: {}` (생성 2026-07-31)
+- ⚠️ **미해결**: `isManaged:false`가 "KeeperHub 비위탁(외부 서명)"을 뜻한다면 Turnkey 자동 서명 전제가 깨진다.
+  → 첫 `execute_transfer` `simulate:true`로 검증. 서명 주체 문제면 관리형 지갑 신규 생성 필요.
+
 **핵심 MCP 툴 (총 30+, `tools_documentation`/`list_action_schemas`로 최신 확인):**
 - 생성: `create_workflow`(nodes+edges), `ai_generate_workflow`(자연어), `validate_workflow`, `update_workflow`, `list_workflows`, `get_workflow`
 - 실행: `execute_check_and_execute`(읽고-판단-실행 한방 ★), `execute_protocol_action`, `execute_contract_call`, `execute_transfer`, `get_direct_execution_status`, `execute_workflow`, `get_execution`
 - 발견: `list_action_schemas`, `search_protocol_actions`
 - 분석: `web3/check-balance`, `web3/read-contract` (지갑 불필요)
-- 지갑: `get_wallet_integration` (org 지갑 하나, per-action walletId 없음)
-- 마켓플레이스: `list_workflow`, `search_workflows`, `call_workflow`
+- 지갑: `list_integrations`(먼저 호출해 ID 확보) → `get_wallet_integration(integrationId)` ※ per-action walletId는 없지만 **integrationId는 필수**
+- 마켓플레이스: `list_workflow`, `search_workflows`, `call_workflow`, `get_workflow_listing`, `update_workflow_listing`, `unlist_workflow`
+- 템플릿: `search_templates`, `get_template`, `deploy_template`(내 조직으로 복제)
+- 플러그인: `search_plugins`, `get_plugin`
+- 프로젝트/태그(워크플로우 그룹핑): `list_projects`, `create_project`, `list_tags`, `create_tag` — 연결은 create/update_workflow에 `projectId`/`tagId`, 해제는 `null`
+
+**실사 완료(8/6, MCP 연결 후 `tools_documentation`):** 위 이름들 실재 확인. 추가 발견 = `delete_workflow`, `prepare_test_pin_data`.
 
 **DeFi 프로토콜 액션:** `execute_protocol_action`, actionType = `protocol/action-slug` (예: `aave-v3/supply`, `aave-v3/repay`). `search_protocol_actions`로 발견.
 
@@ -141,6 +152,17 @@ claude mcp add --transport http --scope user keeperhub https://app.keeperhub.com
 3. `gasLimitMultiplier`는 숫자 아니라 **문자열**
 4. `network`는 **문자열 chainId** ("1","11155111","8453")
 5. deadline 등은 템플릿 산술 말고 **미리 계산**해서 주입
+6. `simulate`는 문자열 아니라 **JSON 불리언** `true` (3·4번과 반대 방향이니 헷갈리지 말 것)
+7. 실제 실행은 **고유 `idempotency_key`** 필요 (simulate 인자에서 `simulate`만 빼고 키 추가해 재호출)
+8. **시뮬레이션은 EVM 전용** — Solana(101/103 및 별칭)는 API 호출 전 거부
+
+**직접 실행 안전 절차 (문서 명시, 반드시 이 순서):**
+1. `simulate: true`로 먼저 실행
+2. `success === true` **그리고** `wouldRevert === false`일 때만 진행 (툴 에러면 즉시 중단)
+3. 동일 인자 + `idempotency_key`로 재호출
+4. `get_direct_execution_status`를 백오프 폴링 → 최종 `transactionLink`를 온체인 증빙으로 보관
+
+**체인 ID 전체 목록:** `list_action_schemas`에 `includeChains: true`
 
 **체인:** 개발 Sepolia(11155111)/Base Sepolia(84532), 제출 tx는 mainnet(가스 스폰서십). USDC 주소·파우셋은 Quickstart 참조.
 
