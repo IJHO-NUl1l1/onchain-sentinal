@@ -126,8 +126,41 @@ claude mcp add --transport http --scope user keeperhub https://app.keeperhub.com
 **실행 지갑 (8/6 확인, 조직 내 유일):**
 - integrationId `5h4tgy5hy0ge3yiiwlysh` / 주소 `0x2b33afb068a77b103fFAF0b7d9F128209076BcE3`
 - type `web3`, `isManaged: false`, `config: {}` (생성 2026-07-31)
-- ⚠️ **미해결**: `isManaged:false`가 "KeeperHub 비위탁(외부 서명)"을 뜻한다면 Turnkey 자동 서명 전제가 깨진다.
-  → 첫 `execute_transfer` `simulate:true`로 검증. 서명 주체 문제면 관리형 지갑 신규 생성 필요.
+- ✅ **해소됨(8/6, Wallet Management 문서)**: Turnkey가 KeeperHub의 기본 지갑 공급자이며 **이메일 인증 시 조직당 1개 자동 프로비저닝**된다.
+  이 주소가 그 Turnkey EOA다. 키는 secure enclave(TEE) 안에 있고 워크플로우 tx에 자동 서명한다 → **무인 대응 전제 유효**.
+  `isManaged:false`는 커스터디 여부가 아니라 **Safe 스마트 계정 미부착** 상태로 읽는다(Safe는 명시적 옵트인).
+- 지갑이 탐색기에서 컨트랙트 코드를 가진 것처럼 보일 수 있음(네트워크당 1회 delegation) — 정상.
+
+**서명 경로 3종 (Sender 토글로 결정):**
+
+| | EOA only | Safe (Sender ON) | Safe + Zodiac Roles |
+|---|---|---|---|
+| 타깃의 `msg.sender` | Turnkey EOA | Safe | Safe |
+| 가스 지불 | **항상 Turnkey EOA** | 항상 EOA | 항상 EOA |
+| 토큰/스왑 차감 | EOA 잔고 | Safe 잔고 | Safe 잔고(한도 내) |
+| 가스 스폰서십 | **가능** | 불가 | 불가 |
+| 함수·인자 화이트리스트 | 없음 | 없음 | **있음(온체인)** |
+
+- ⚠️ **가스는 언제나 EOA, 토큰은 활성 Sender**. 둘 다 충전해야 한다(가장 흔한 실패 원인).
+- Safe 지원 체인: Ethereum, Base, Arbitrum, Optimism, Polygon, **Ethereum Sepolia** (Base Sepolia 없음)
+- Zodiac Roles: 프로토콜/함수/인자 단위 온체인 허용목록 + 토큰별 지출 한도. `karpatkey/defi-kit` 프리셋.
+- ⚠️ **owner-bypass**: threshold=1에서 EOA가 Safe 소유자이자 role 보유자라 `safe.execTransaction` 직접 호출로 우회 가능.
+  → **"정책(policy)이지 경계(boundary)가 아니다."** 서면에 보안 경계라고 쓰지 말 것. 다중 소유자(threshold>1)는 로드맵.
+
+**가스 스폰서십 (Turnkey Gas Station):**
+- 조건 **전부** 충족 시에만: 지원 네트워크 + **Safe 미사용(직접 지갑 sender)** + **공개 멤풀** + 가스 크레딧 잔여
+- 지원: Ethereum, Base, Polygon, Arbitrum + 테스트넷(Sepolia, Base Sepolia, Polygon Amoy, Arbitrum Sepolia)
+- **테스트넷 사용은 크레딧 차감 없음**, 메인넷만 차감
+- 가스 "수수료"만 대납. 전송 자산(ETH/USDC 등)은 자기 잔고에서 나간다
+- ⚠️ **private routing(비공개 멤풀)을 켜면 스폰서십이 꺼진다** → 7장 데모 구성과 충돌, 둘 중 택일
+
+**⚠️ 스폰서 tx의 온체인 모습 (데모·심사 증빙에 치명적):**
+- From = 모르는 릴레이어 주소 / To = 모르는 컨트랙트 / Value = `0` / 우리 액션은 **internal call**
+- **반드시 `transactionHash`로 검증**. 지갑 주소의 tx 목록에는 **안 나타난다** (스폰서 tx는 우리 지갑이 보낸 게 아님)
+- 심사위원이 지갑 주소를 열어보면 "아무 일도 없었던 것처럼" 보임 → 제출물에는 **tx 해시 링크**를 명시하고 Logs/Internal Txns 탭을 안내할 것
+
+**가스 한도:** `eth_estimateGas` × 배수. 기본 배수 Ethereum 2.0(보수 2.5) / Base 1.5(보수 2.0).
+보수 배수는 **event·webhook 등 시간민감 트리거**에 적용. 노드별 절대 gasLimit 지정 시 배수는 무시된다.
 
 **핵심 MCP 툴 (총 30+, `tools_documentation`/`list_action_schemas`로 최신 확인):**
 - 생성: `create_workflow`(nodes+edges), `ai_generate_workflow`(자연어), `validate_workflow`, `update_workflow`, `list_workflows`, `get_workflow`
@@ -155,6 +188,9 @@ claude mcp add --transport http --scope user keeperhub https://app.keeperhub.com
 6. `simulate`는 문자열 아니라 **JSON 불리언** `true` (3·4번과 반대 방향이니 헷갈리지 말 것)
 7. 실제 실행은 **고유 `idempotency_key`** 필요 (simulate 인자에서 `simulate`만 빼고 키 추가해 재호출)
 8. **시뮬레이션은 EVM 전용** — Solana(101/103 및 별칭)는 API 호출 전 거부
+9. `recipientAddress`는 **엄격한 EIP-55 체크섬 검증**. 대소문자 섞인 주소의 체크섬이 틀리면 거부(`Invalid recipient address`).
+   → **전부 소문자로 넘기거나** 정확한 체크섬 형태로. 손으로 대소문자 고치지 말 것
+10. `kh_` 키에 스코프가 걸려 있으면 쓰기 작업에 **`mcp:write` 스코프** 필요 (없으면 403). 스코프 없는 키는 통과
 
 **직접 실행 안전 절차 (문서 명시, 반드시 이 순서):**
 1. `simulate: true`로 먼저 실행
@@ -164,7 +200,10 @@ claude mcp add --transport http --scope user keeperhub https://app.keeperhub.com
 
 **체인 ID 전체 목록:** `list_action_schemas`에 `includeChains: true`
 
-**체인:** 개발 Sepolia(11155111)/Base Sepolia(84532), 제출 tx는 mainnet(가스 스폰서십). USDC 주소·파우셋은 Quickstart 참조.
+**체인:** 개발 Sepolia(11155111)/Base Sepolia(84532). USDC 주소·파우셋은 Quickstart 참조.
+- 8/6 정정: **테스트넷도 가스 스폰서십 대상이고 크레딧을 안 먹는다.** "제출 tx는 반드시 mainnet"이 아니다.
+  메인넷 tx는 심사 임팩트가 크지만 크레딧을 소모하므로, 개발·리허설은 테스트넷 / 제출용 1~2건만 메인넷을 권장.
+- **Sepolia 권장**: 스폰서십 + Safe 둘 다 지원되는 유일한 테스트넷 (Base Sepolia는 Safe 미지원).
 
 ### 🟠 Flare 기술 스펙
 
@@ -248,7 +287,7 @@ claude mcp add --transport http --scope user keeperhub https://app.keeperhub.com
 |---|---|
 | 온체인 실행 | Phase1 즉시실행 + Phase2 대응 (실제 tx 링크) |
 | KeeperHub surfaces | MCP / create_workflow / audit trail / (Marketplace 등록으로 x402·MPP) |
-| Reliability | 실행 신뢰성 KH 위임, 가스/재시도/private routing이 데모 주연 |
+| Reliability | 실행 신뢰성 KH 위임, 가스/재시도가 데모 주연 ⚠️ private routing은 스폰서십과 배타 — 둘 중 하나만 |
 | 실사용성 | "주소 하나로 시작" + Marketplace 등록으로 "실제 호출 가능" 증명 |
 | 차별화 | Hub의 정적 템플릿("Aave V3 Health Factor Guardian") vs 우리 AI 동적 생성 |
 
@@ -297,6 +336,14 @@ D12~D14(~8/15 05:00) 🟠 Vault 마무리·배포 + Flare 영상/서면/제출
 - [ ] MVP 감시 범위 (KH=Aave v3 유력 / Flare=담보볼트)
 - [ ] 데모 시나리오 자산·상황 (급락 연출 방법)
 - [ ] 두 마감 타임존 최종 확인 (제출 페이지 로컬 표시)
+- [ ] **★ Safe + Zodiac Roles 채택 여부** (8/6 신규)
+  - 찬성: 우리 핵심 원칙 "LLM 출력을 사전정의 enum으로 제한"을 **온체인에서 강제**하는 물건이다.
+    함수·인자 화이트리스트 + 토큰별 지출 한도 = "AI가 폭주해도 허용된 액션만 나간다"를 코드로 증명.
+    KeeperHub surfaces 점수·안전성 서사 양쪽에 크게 기여.
+  - 반대: 가스 스폰서십과 배타. 배포·정책 설정 공수. Safe에 별도 자금 충전 필요(EOA는 가스, Safe는 토큰).
+    owner-bypass 때문에 "보안 경계"로는 못 판다.
+  - 판단 기준: 첫 tx(★분수령) 통과 후 남는 시간. 스코프 밸브 상 Marketplace 등록보다 우선순위 높다고 봄.
+- [ ] 스폰서십 vs private routing 택일 (Reliability 서사를 어느 쪽으로 짤지)
 
 ---
 
