@@ -19,11 +19,14 @@
 
 - [~] KeeperHub 계정 생성 + Turnkey 지갑 확인
       - [x] 계정 생성 + 온보딩 (8/6, 기기1)
-      - [ ] `get_wallet_integration` 로 Turnkey 지갑 주소 확보 ← 다음 작업
+      - [x] 실행 지갑 주소 확보 `0x2b33...BcE3` (8/6) — 주소·integrationId는 architecture.md
+      - [ ] ⚠️ **`isManaged:false` 규명** — Turnkey 자동 서명이 되는 지갑인지 확인 ← 최우선
+            (KeeperHub 전제가 걸린 문제. 첫 `execute_transfer` simulate로 검증)
 - [x] `claude mcp add` 로 MCP 연결 + `/mcp` OAuth 완료 (8/6, 기기1 — `Connected to keeperhub` 확인)
       ※ `--scope user`라 두 번째 기기에서 등록+OAuth 재실행 필요
+- [x] MCP 툴 목록 실사 (`tools_documentation` — 함정 3개 추가 발견, architecture.md 반영, 8/6)
 - [ ] MCP 툴로 워크플로우 1개 수동 생성 (`create_workflow`)
-- [ ] Sepolia/Base Sepolia 파우셋으로 테스트 자산 확보
+- [ ] Sepolia/Base Sepolia 파우셋으로 테스트 자산 확보 (수령 주소 = 위 실행 지갑)
 - [ ] **첫 트랜잭션 성공** (`execute_transfer` simulate→실행→transactionLink 확보) ★분수령
 - [ ] Coston2 파우셋(C2FLR) 확보 + RPC 연결 확인
 - [~] Git 레포 생성 + 두 기기 clone + `.gitignore`/`.env.example` 세팅
@@ -97,3 +100,6 @@
   다음 = ①두 번째 기기 clone·환경 맞추기 ②레포 구조 결정(에이전트/executor 코드가 들어갈 자리) ③Phase A KeeperHub MCP 연결(기기별로 각각 `claude mcp add` 필요).
 - 8/6: KeeperHub 계정 생성 + MCP 연결·OAuth 완료(`Connected to keeperhub`). 등록은 `--scope user`(`~/.claude.json`).
   다음 = ①`get_wallet_integration`로 Turnkey 지갑 주소 확보 ②`tools_documentation`로 툴 목록 실사 ③Sepolia 파우셋 → 첫 tx(★분수령).
+- 8/6: 지갑·툴 실사 완료. 실행 지갑 1개 확인(`0x2b33...BcE3`). 툴 이름은 문서와 대체로 일치, 함정 3개 추가 발견(simulate=불리언 / idempotency_key / 시뮬은 EVM 전용) → architecture.md 반영.
+  ⚠️ 리스크: 지갑이 `isManaged:false`라 Turnkey 자동 서명 전제가 불확실. 이게 안 되면 KeeperHub 버전 핵심(무인 대응)이 흔들리므로 최우선 규명.
+  다음 = ①Sepolia 파우셋 수령 ②`execute_transfer` simulate로 서명 주체 검증 ③통과 시 실제 실행 → transactionLink 확보(★분수령).
