@@ -21,6 +21,8 @@
 
 **오늘(8/6) 반드시 할 것:** ①오피스아워(마지막 회차) ②첫 tx ③레포 구조 결정
 
+**8/8 갱신: 첫 tx 뚫음.** Phase A 사실상 마무리 단계 — 남은 건 레포 구조 결정(Phase B 진입 조건) 뿐.
+
 ---
 
 ## Phase A — 셋업 & 검증 (D1-2)
@@ -31,23 +33,30 @@
       - [x] ✅ `isManaged:false` 규명 완료 (8/6) — 오탐. Turnkey EOA 자동 프로비저닝 지갑이 맞고
             자동 서명 유효. `isManaged`는 Safe 미부착 상태를 뜻함. 상세는 architecture.md
 - [x] `claude mcp add` 로 MCP 연결 + `/mcp` OAuth 완료 (8/6, 기기1 — `Connected to keeperhub` 확인)
-      ※ `--scope user`라 두 번째 기기에서 등록+OAuth 재실행 필요
+      - [x] 두 번째 기기(기기2)에서도 등록+OAuth 재실행 완료 (8/8 — `Authentication successful. Connected to keeperhub.`)
 - [x] MCP 툴 목록 실사 (`tools_documentation` — 함정 3개 추가 발견, architecture.md 반영, 8/6)
-- [ ] MCP 툴로 워크플로우 1개 수동 생성 (`create_workflow`)
-- [ ] **Sepolia** 파우셋으로 테스트 자산 확보 (수령 주소 = 위 실행 지갑) ← 다음 작업
-      ※ Base Sepolia 아닌 Sepolia 권장 — 스폰서십+Safe 둘 다 지원되는 유일한 테스트넷
-      ※ 스폰서십이 붙어도 가스용 ETH는 EOA에 조금 넣어두는 게 안전
-- [ ] **첫 트랜잭션 성공** (`execute_transfer` simulate→실행→transactionLink 확보) ★분수령
-- [ ] Coston2 파우셋(C2FLR) 확보 + RPC 연결 확인
+- [x] MCP 툴로 워크플로우 1개 수동 생성 (`create_workflow`, 8/8, 기기2)
+      워크플로우 `sentinel-test-manual` (id `acc6sf96s9w63h7rgv8oq`) — Manual 트리거 + `web3/check-balance`.
+      `execute_workflow`로 실행 검증까지 완료(mainnet 0.0 ETH 확인 후 Sepolia로 임시 전환해 0.05 ETH도 확인).
+- [x] **Sepolia** 파우셋으로 테스트 자산 확보 (8/8, 기기2 — 개인 계정에서 실행 지갑으로 0.05 ETH 전송)
+- [x] **첫 트랜잭션 성공** (`execute_transfer` simulate→실행→transactionLink 확보) ★분수령 (8/8, 기기2)
+      Sepolia, `0x2b33...BcE3` → `0x6Bc68c...C809c` 0.001 ETH.
+      tx: `0x8632b1ae0102eb9815918e3fd4f9d16d6cf94c058fe0d9362100228343e091e9`
+      https://sepolia.etherscan.io/tx/0x8632b1ae0102eb9815918e3fd4f9d16d6cf94c058fe0d9362100228343e091e9
+      ⚠️ architecture.md 3장 스폰서 tx 패턴 실증됨 — top-level From/To/Value는 릴레이어·컨트랙트·0이고,
+      실제 전송은 **Internal Transactions 탭**에 찍힘. 데모 촬영 시 이 화면 그대로 써야 함.
+- [x] Coston2 파우셋(C2FLR) 확보 + RPC 연결 확인 (8/8, 기기2 — MetaMask에 Coston2 네트워크 추가 후 100 C2FLR 수령 확인)
 - [~] Git 레포 생성 + 두 기기 clone + `.gitignore`/`.env.example` 세팅
       - [x] `.gitignore` 수정 (깨져 있던 PowerShell here-string 텍스트 → 실제 패턴, 8/6)
       - [x] `.env.example` 작성 (KeeperHub/Flare/Supabase 변수 템플릿, 8/6)
       - [x] `.gitattributes` 추가 (두 기기 줄바꿈 churn 방지, 8/6)
       - [x] 기기 세팅 절차를 `/CLAUDE.md` "두 기기 개발"에 정리 (8/6)
-      - [ ] 두 번째 기기 clone + `.env` 값 수동 이전
-- [~] 두 기기 Node 버전(`.nvmrc`) 통일
+      - [x] 두 번째 기기 clone (8/8)
+      - [ ] `.env` 값 수동 이전 — 아직 안 함. Phase B에서 실제로 `.env` 읽는 코드 쓸 때 처리 예정
+- [x] 두 기기 Node 버전(`.nvmrc`) 통일
       - [x] `.nvmrc` = 24.15.0 + `app/package.json` engines 핀 (8/6)
-      - [ ] 두 번째 기기에서 `nvm use` 적용 확인
+      - [x] 두 번째 기기: nvm-windows 설치 → `nvm install 24.15.0` → `nvm use 24.15.0` 확인 (8/8)
+            (기기2엔 Node/npm/claude CLI 자체가 없어서 처음부터 설치. `npm install --prefix app`도 완료)
 
 ## Phase B — 공유 뼈대 (8/7-8/8, 압축) 🟢
 
@@ -129,3 +138,8 @@
   큰 수확 3개: ①가스 스폰서십 조건(테스트넷 무료, private routing과 배타) ②스폰서 tx는 지갑 주소 tx 목록에 안 뜸 → 증빙은 tx 해시로
   ③Safe+Zodiac Roles = 우리 "액션 enum 제한"을 온체인에서 강제하는 수단(채택 여부 결정 대기).
   다음 = Sepolia 파우셋 → `execute_transfer` simulate → 실제 실행(★분수령).
+- 8/8 기기2: 기기2에 Node/npm/claude CLI 자체가 없어서 nvm-windows부터 설치 → Node 24.15.0 → `npm install --prefix app` →
+  `claude mcp add`+`/mcp` OAuth 순서로 처음부터 세팅. 이어서 워크플로우 수동 생성(`sentinel-test-manual`) 검증,
+  Sepolia 파우셋(개인 계정 경유) + Coston2 파우셋(100 C2FLR) 확보, **★첫 tx 성공**까지 한 세션에 완료.
+  Phase A 사실상 종료 — 남은 건 `.env` 값 이전(Phase B 코드 작성 시점에) 뿐.
+  다음 = Phase B 진입 전 **레포 구조 결정**(architecture.md 6장 표 기준으로 `app/` 안에 agent·executors 자리 정하기) → Executor 인터페이스.
