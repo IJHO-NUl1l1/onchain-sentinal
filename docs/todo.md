@@ -60,14 +60,17 @@
 
 ## Phase B — 공유 뼈대 (8/7-8/8, 압축) 🟢
 
-- [ ] **⛔ 레포 구조 결정 (선행)** — 에이전트 로직 / Executor / 백엔드 몸통이 어디 사는지.
-      현재 `app/`(Next 스캐폴드) + 빈 `contracts/`뿐. **정하기 전에 코드 쓰면 두 기기 병합이 아프다**
+- [x] **⛔ 레포 구조 결정 (선행)** (8/8) — `app/` 안에 통합 (Next 스캐폴드와 같은 프로젝트, `@/*` 별칭 사용):
+      `app/agent/`(analyzer·diagnoser·strategist·types·prompts/), `app/executors/`(types·keeperhub·flare),
+      `app/lib/`(공용, 아직 빈 상태). `contracts/`는 Phase D까지 별개 그대로.
 - [ ] Next.js 대시보드 골격 (지갑 주소 등록 / 로그 뷰) — "실행 증명"에 필요한 최소한만
-- [ ] Executor 인터페이스 정의 (`provisionMonitoring`, `execute`)
-- [ ] Agent 로직 - analyzer (지갑 조회 → 리스크 프로파일)
-- [ ] Agent 로직 - diagnoser (사건 → 진단)
-- [ ] Agent 로직 - strategist (진단 → 액션 enum 선택)
-- [ ] 프롬프트 템플릿 초안
+- [x] Executor 인터페이스 정의 (`provisionMonitoring`, `execute`) (8/8) — `app/executors/types.ts`.
+      `keeperhub.ts`/`flare.ts`는 인터페이스 구현 스켈레톤만(메서드는 throw) — 실제 호출부는 각각 Phase C/D.
+      액션 enum 미확정이라 `ActionType`은 임시로 `string`.
+- [~] Agent 로직 - analyzer (지갑 조회 → 리스크 프로파일) (8/8) — 파일·시그니처만, 본문은 미구현
+- [~] Agent 로직 - diagnoser (사건 → 진단) (8/8) — 파일·시그니처만, 본문은 미구현
+- [~] Agent 로직 - strategist (진단 → 액션 enum 선택) (8/8) — 파일·시그니처만, 본문은 미구현
+- [ ] 프롬프트 템플릿 초안 — 액션 enum 확정 후 작성 (지금 쓰면 enum 바뀔 때마다 재작성해야 함)
 - [ ] 액션 enum 확정 (`search_protocol_actions` 결과 + AssetVault 패턴 참고)
 
 ## Phase C — KeeperHub 버전 (8/9-8/12) 🔵
