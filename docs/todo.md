@@ -27,7 +27,7 @@
 
 ## Phase A — 셋업 & 검증 (D1-2)
 
-- [~] KeeperHub 계정 생성 + Turnkey 지갑 확인
+- [x] KeeperHub 계정 생성 + Turnkey 지갑 확인
       - [x] 계정 생성 + 온보딩 (8/6, 기기1)
       - [x] 실행 지갑 주소 확보 `0x2b33...BcE3` (8/6) — 주소·integrationId는 architecture.md
       - [x] ✅ `isManaged:false` 규명 완료 (8/6) — 오탐. Turnkey EOA 자동 프로비저닝 지갑이 맞고
