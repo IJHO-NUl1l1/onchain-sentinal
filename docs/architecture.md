@@ -279,6 +279,12 @@ Aave v4는 대안이 아니다 — Ethereum 메인넷만 지원(L2 없음), 그�
 - Feed ID: FLR/USD `0x01464c522f...`, BTC/USD `0x014254432f...`, ETH/USD `0x014554482f...`
 - 주소(Coston2): FtsoV2 `0x3d893C53D9e8056135C26C8c638B76C8b60Df726`, FeeCalculator `0x88A9315f96c9b5518BBeC58dC6a914e13fAb13e2`
 
+**✅ SentinelVault.sol 배포 완료 (8/9, Coston2):**
+- 주소: `0xBf5778109e894b7C093D91B8a7518c95Fe74c3EF` — 제출물 "smart contract address"란에 이 값
+- agent(`agentRespond` 화이트리스트): `0x6Bc68c3C6d4D9B02E435dF25bBc22E59541C809c`
+- 익스플로러: https://coston2-explorer.flare.network/address/0xBf5778109e894b7C093D91B8a7518c95Fe74c3EF
+- `eth_getCode`로 실제 bytecode 존재 확인(빈 응답 아님)
+
 **★ Volatility Incentive (킬러 기능):**
 - 컨트랙트 `FastUpdateIncentiveManager` (인터페이스 `IFastUpdateIncentiveManager`, ContractRegistry로 조회)
 - `getCurrentSampleSizeIncreasePrice()` → 현재 가속 비용 / `offerIncentive({rangeIncrease,rangeLimit})` payable → 가속

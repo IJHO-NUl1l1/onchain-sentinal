@@ -140,8 +140,11 @@
 - [ ] Volatility Incentive (`offerIncentive`) 통합 ★차별화 — 의도적으로 미룸.
       `IFastUpdateIncentiveManager.offerIncentive()`가 커스텀 fixed-point 타입(Range/SampleSize)을
       요구해서, 지어내지 않고 제대로 조사한 뒤 붙일 것
-- [ ] Coston2 배포 + 컨트랙트 주소 확보 — `DEPLOYER_PRIVATE_KEY` 필요(`contracts/.env`,
-      루트 `.env`나 `app/.env`와 별개 파일)
+- [x] **Coston2 배포 완료 (8/9)** — `0xBf5778109e894b7C093D91B8a7518c95Fe74c3EF`
+      (agent = `0x6Bc68c3C6d4D9B02E435dF25bBc22E59541C809c`, 개인 지갑 재사용).
+      `eth_getCode`로 실제 bytecode 존재 확인. 익스플로러:
+      https://coston2-explorer.flare.network/address/0xBf5778109e894b7C093D91B8a7518c95Fe74c3EF
+      제출물 "smart contract address"에 이 주소 기입하면 됨 — architecture.md §3에도 기록.
 - [ ] FlareExecutor 어댑터 (`setPolicy`, `agentRespond`)
 - [ ] 키퍼 스크립트 (퍼미션리스 `checkAndExecute` 주기 호출)
 - [ ] (스코프밸브) FDC 유출검증 - 시간 되면 실구현, 안 되면 인터페이스+로드맵
