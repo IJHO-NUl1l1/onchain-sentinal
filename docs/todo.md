@@ -63,7 +63,9 @@
 - [x] **⛔ 레포 구조 결정 (선행)** (8/8) — `app/` 안에 통합 (Next 스캐폴드와 같은 프로젝트, `@/*` 별칭 사용):
       `app/agent/`(analyzer·diagnoser·strategist·types·prompts/), `app/executors/`(types·keeperhub·flare),
       `app/lib/`(공용, 아직 빈 상태). `contracts/`는 Phase D까지 별개 그대로.
-- [ ] Next.js 대시보드 골격 (지갑 주소 등록 / 로그 뷰) — "실행 증명"에 필요한 최소한만
+- [x] Next.js 대시보드 골격 (지갑 주소 등록 / 로그 뷰) (8/9) — UI만, 백엔드 미연결.
+      `_components/wallet-form.tsx`(지갑 입력, 로컬 state만) + `log-table.tsx`(플레이스홀더 로그).
+      색 최소화(무채색 + 심각도 라벨만 절제된 색), 네온/그라디언트 없음.
 - [x] Executor 인터페이스 정의 (`provisionMonitoring`, `execute`) (8/8) — `app/executors/types.ts`.
       `keeperhub.ts`/`flare.ts`는 인터페이스 구현 스켈레톤만(메서드는 throw) — 실제 호출부는 각각 Phase C/D.
       액션 enum 미확정이라 `ActionType`은 임시로 `string`.
