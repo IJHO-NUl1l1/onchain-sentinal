@@ -3,16 +3,12 @@
 // viem으로 직접 온체인을 읽는다 — KeeperHub MCP를 호출하지 않는다. analyzer는
 // 🟢 공유 코드라 특정 executor(KeeperHub)에 종속된 방식을 쓰면 안 되기 때문
 // (CLAUDE.md "Executor 경계").
-//
-// 현재 스코프: 네이티브 잔고만. Aave v3 포지션(health factor 등) 조회는 아직 안 함 —
-// Sepolia Aave v3 Pool 컨트랙트 주소가 architecture.md에 없는 값이라 지어내지 않고
-// 후속 작업으로 미뤘다 (docs/todo.md 참조).
 
-import { createPublicClient, formatEther, http, isAddress } from "viem";
-import { sepolia } from "viem/chains";
+import { createPublicClient, formatEther, formatUnits, http, isAddress } from "viem";
+import { base, sepolia } from "viem/chains";
 import type { MonitoringProfile } from "../executors/types";
 
-const client = createPublicClient({
+const sepoliaClient = createPublicClient({
   chain: sepolia,
   transport: http(),
 });
@@ -22,7 +18,7 @@ export async function analyzeWallet(walletAddress: string): Promise<MonitoringPr
     throw new Error(`analyzeWallet: invalid address "${walletAddress}"`);
   }
 
-  const balanceWei = await client.getBalance({ address: walletAddress });
+  const balanceWei = await sepoliaClient.getBalance({ address: walletAddress });
   const assets = balanceWei > BigInt(0) ? ["ETH"] : [];
 
   return { walletAddress, assets };
@@ -33,6 +29,91 @@ export async function getNativeBalance(walletAddress: string): Promise<string> {
   if (!isAddress(walletAddress)) {
     throw new Error(`getNativeBalance: invalid address "${walletAddress}"`);
   }
-  const balanceWei = await client.getBalance({ address: walletAddress });
+  const balanceWei = await sepoliaClient.getBalance({ address: walletAddress });
   return formatEther(balanceWei);
+}
+
+// ── Aave v3 실데이터 조회 (Base) ──────────────────────────────────────
+// architecture.md §0-1 "핵심 판단 기준" 1번 축: 진짜 온체인 데이터.
+// Pool 주소는 aave-address-book(AaveV3Base.sol)에서 가져온 뒤 8/9에
+// getReservesList()/getConfiguration()으로 직접 온체인 대조해 확정함
+// (Sepolia에서 문서-실제 불일치를 겪은 뒤라 반드시 이 단계를 거쳤다).
+
+const baseClient = createPublicClient({
+  chain: base,
+  transport: http(),
+});
+
+const BASE_AAVE_POOL = "0xA238Dd80C259a72e81d7e4664a9801593F98d1c5";
+
+const poolAbi = [
+  {
+    type: "function",
+    name: "getUserAccountData",
+    stateMutability: "view",
+    inputs: [{ name: "user", type: "address" }],
+    outputs: [
+      { name: "totalCollateralBase", type: "uint256" },
+      { name: "totalDebtBase", type: "uint256" },
+      { name: "availableBorrowsBase", type: "uint256" },
+      { name: "currentLiquidationThreshold", type: "uint256" },
+      { name: "ltv", type: "uint256" },
+      { name: "healthFactor", type: "uint256" },
+    ],
+  },
+] as const;
+
+export interface AaveAccountData {
+  totalCollateralBase: bigint;
+  totalDebtBase: bigint;
+  availableBorrowsBase: bigint;
+  currentLiquidationThreshold: bigint;
+  ltv: bigint;
+  healthFactor: bigint;
+}
+
+export async function getAaveAccountData(walletAddress: string): Promise<AaveAccountData> {
+  if (!isAddress(walletAddress)) {
+    throw new Error(`getAaveAccountData: invalid address "${walletAddress}"`);
+  }
+
+  const [
+    totalCollateralBase,
+    totalDebtBase,
+    availableBorrowsBase,
+    currentLiquidationThreshold,
+    ltv,
+    healthFactor,
+  ] = await baseClient.readContract({
+    address: BASE_AAVE_POOL,
+    abi: poolAbi,
+    functionName: "getUserAccountData",
+    args: [walletAddress],
+  });
+
+  return {
+    totalCollateralBase,
+    totalDebtBase,
+    availableBorrowsBase,
+    currentLiquidationThreshold,
+    ltv,
+    healthFactor,
+  };
+}
+
+// diagnoser 프롬프트에 붙여넣기 좋은 사람이 읽을 수 있는 형태로 변환.
+// totalCollateralBase 등은 Aave "base currency" 기준 8자리 소수(대략 USD),
+// healthFactor는 18자리 소수(1e18 = 1.0).
+export function formatAaveAccountData(data: AaveAccountData): string {
+  const hf =
+    data.healthFactor > BigInt(2) ** BigInt(255)
+      ? "무한대 (부채 없음)"
+      : formatUnits(data.healthFactor, 18);
+  return [
+    `담보 총액(base): ${formatUnits(data.totalCollateralBase, 8)}`,
+    `부채 총액(base): ${formatUnits(data.totalDebtBase, 8)}`,
+    `헬스팩터: ${hf}`,
+    `LTV: ${(Number(data.ltv) / 100).toFixed(2)}%`,
+    `청산 임계값: ${(Number(data.currentLiquidationThreshold) / 100).toFixed(2)}%`,
+  ].join("\n");
 }
