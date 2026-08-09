@@ -56,9 +56,17 @@
 
 ### 현재 상태 (8/9 기준 — todo.md와 별개로 여기서도 추적)
 
-- [x] 1번 축 부분 구현: `analyzer.ts`가 실제 온체인 조회(네이티브 잔고) — 단, Aave 실제 포지션(헬스팩터 등)까지는 아직
-- [ ] 1번 축 완성: Aave 실제 헬스팩터/담보/부채 조회로 확장 (Base 네트워크, 진행 중)
-- [ ] 2번 축: **diagnoser 프롬프트를 실제 온체인 데이터로 단 한 번도 실행해본 적 없음** — 최우선 검증 대상
+- [x] **1번 축 완성 (8/9)**: `analyzer.ts`의 `getAaveAccountData()`가 Base Aave v3 Pool에서 실제
+      헬스팩터/담보/부채 조회. Pool/USDC 주소는 aave-address-book에서 가져온 뒤 온체인
+      `getReservesList()`/`getConfiguration()`으로 직접 대조해 확정(Sepolia 실수 반복 안 함).
+      실행 지갑으로 실증: 담보 0, 부채 0, 헬스팩터 uint256 최댓값(Aave의 "부채 없음" 관례) — 진짜 응답.
+- [x] **2번 축 첫 실행 (8/9)**: 위 실데이터를 `prompts/diagnoser.md`→`prompts/strategist.md`에
+      실제로 태워서 `{severity: "low", diagnosis: "포지션 없음, 위험 없음"}` →
+      `{action: "NO_ACTION", rationale: "..."}` 산출. **이 프로젝트 최초로 실제 온체인 데이터 →
+      실제 agent 진단 → 실제 액션 결정까지 끝까지 돈 사례.** 위험 없는 상태를 정직하게 "위험 없음"으로
+      진단했다는 점이 중요 — 가짜 위기를 지어내지 않음.
+      **남은 것**: 실제 포지션이 있을 때(담보 공급 후) medium/high severity 진단도 실제로 나오는지 확인
+      (Base에 자금 준비 후 진행)
 
 ---
 
