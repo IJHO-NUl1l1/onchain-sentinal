@@ -20,6 +20,10 @@
 **8/9 기준: Phase A·B 완료, Phase C·D 동시 진행중.** 원안 대비 있었던 3~4일 지연(8/6 시점)은 Phase B를
 8/7-8/9로 압축해 흡수했다 — 개정 일정은 architecture.md 8장 참조.
 
+**⏰ 8/10 08:50 현재 — KeeperHub 마감까지 약 3일 10시간, Flare까지 약 5일.**
+기술 코어는 두 트랙 다 §0-1 두 축을 이미 실증했다. **남은 최대 리스크는 기능이 아니라 제출물이다**
+— 영상·README가 두 트랙 다 0%. 지금부터는 신규 기능보다 제출물을 먼저 끝내는 편이 안전하다.
+
 **다음 세션 시작점 (8/9 세션 종료 시점 기준) — 아래 "최근 작업 로그" 맨 마지막 항목 필독:**
 Base(KeeperHub 쪽)에 자금 준비하고 `execute()` 라이브 검증 → Flare `FlareExecutor` 연결 →
 두 트랙 다 데모 영상·README. 상세는 로그 참조.
@@ -250,3 +254,13 @@ Base(KeeperHub 쪽)에 자금 준비하고 `execute()` 라이브 검증 → Flar
   - 데모 영상·README는 두 트랙 다 0% — architecture.md §0-1을 중심으로 써야 함(CLAUDE.md 규칙)
   - 남은 "결정 대기": Safe+Zodiac(스킵 추천), 스폰서십 vs private routing(스폰서십 추천),
     데모 시나리오 자산·급락 연출
+
+- 8/10 기기1: 진행현황 대조만 함(코드 변경 없음). 이 기기가 8/6 이후 pull을 안 해서 나흘치(커밋 30개)를
+  모르고 있었음 — pull로 동기화 완료. KeeperHub 서버 실물도 `list_workflows`/`list_integrations`로 직접 대조:
+  워크플로우 7개(샘플 3 + `sentinel-test-manual`/`sentinel-0x2b33…`/`sentinel-approve-usdc-pool`/`sentinel-0x6Bc68c…`),
+  통합 지갑 1개 — 전부 todo.md 기록과 일치. 문서가 실제 상태를 정확히 반영하고 있음을 확인.
+  ⚠️ 문서 정합성 하나: §3의 "Sepolia 권장"(8/6, 스폰서십+Safe 기준)과 "Aave v3는 Sepolia 미지원"(8/9)이
+  나란히 있어 오해 소지 — 전자는 전송/스폰서십 한정, Aave는 Base라는 단서를 붙이면 깔끔.
+  다음 = ①README·데모영상 착수(최우선, 둘 다 0%) ②`FlareExecutor` 스텁 해소(현재 Hardhat 스크립트로
+  직접 호출 중이라 Executor 인터페이스를 안 거침 — CLAUDE.md "Executor 경계" 규칙과 어긋남)
+  ③Base 자금 도착 시 `execute()` 라이브 검증(§0-1 기준으론 이미 통과라 스코프밸브 대상)
