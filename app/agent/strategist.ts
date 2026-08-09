@@ -6,6 +6,7 @@
 import type { Diagnosis, Strategy } from "./types";
 
 export async function decideStrategy(_diagnosis: Diagnosis): Promise<Strategy> {
-  // TODO(Phase B): prompts/strategist.md 작성 후 구현.
-  throw new Error("decideStrategy: not implemented");
+  // 로드맵: API+서버 단계에서 prompts/strategist.md로 Claude API 호출.
+  // 지금(Phase C 반자동 데모)은 사람이 그 프롬프트를 Claude Code 세션에 직접 넣는다.
+  throw new Error("decideStrategy: not implemented (roadmap — see prompts/strategist.md)");
 }

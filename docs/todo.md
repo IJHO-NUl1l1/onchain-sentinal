@@ -69,9 +69,12 @@
 - [x] Executor 인터페이스 정의 (`provisionMonitoring`, `execute`) (8/8) — `app/executors/types.ts`.
       `keeperhub.ts`/`flare.ts`는 인터페이스 구현 스켈레톤만(메서드는 throw) — 실제 호출부는 각각 Phase C/D.
 - [x] **액션 enum 확정 (8/9)** — 상세는 architecture.md §10. `app/executors/types.ts`의 `ActionType`에 반영.
-- [~] Agent 로직 - analyzer (지갑 조회 → 리스크 프로파일) ← 지금 진행 (8/9)
-      viem으로 실제 온체인 조회. 현재 스코프: 네이티브 잔고만(Aave 포지션은 별도 후속 — 아래 참고)
-- [ ] 프롬프트 템플릿 초안 ← 지금 진행 (8/9)
+- [x] Agent 로직 - analyzer (지갑 조회 → 리스크 프로파일) (8/9)
+      viem 추가 + `analyzeWallet()` 실구현(네이티브 잔고). 실행 지갑(`0x2b33...BcE3`)으로
+      실제 조회해 `0.049 ETH` 확인(첫 tx 후 잔액과 일치) — 동작 검증 완료.
+      Aave 포지션 조회는 스코프 밖(아래 후속 항목).
+- [x] 프롬프트 템플릿 초안 (8/9) — `prompts/diagnoser.md`(사건→severity/diagnosis),
+      `prompts/strategist.md`(진단→액션, enum 표 포함해 이탈 방지)
 
 **8/9 스코프 조정 (diagnoser/strategist 코드 구현 후순위로 미룸):**
 "판단"의 실체는 Claude가 프롬프트를 읽고 하는 것이지, `.ts` 함수 안의 로직이 아니다

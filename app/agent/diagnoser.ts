@@ -6,6 +6,7 @@
 import type { Diagnosis } from "./types";
 
 export async function diagnose(_event: unknown): Promise<Diagnosis> {
-  // TODO(Phase B): prompts/diagnoser.md 작성 후 Claude 호출로 교체.
-  throw new Error("diagnose: not implemented");
+  // 로드맵: API+서버 단계에서 prompts/diagnoser.md로 Claude API 호출.
+  // 지금(Phase C 반자동 데모)은 사람이 그 프롬프트를 Claude Code 세션에 직접 넣는다.
+  throw new Error("diagnose: not implemented (roadmap — see prompts/diagnoser.md)");
 }
