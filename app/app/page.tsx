@@ -1,4 +1,4 @@
-import { WalletForm } from "./_components/wallet-form";
+import { GuardPanel } from "./_components/guard-panel";
 import { LogTable } from "./_components/log-table";
 
 export default function Home() {
@@ -9,13 +9,10 @@ export default function Home() {
           <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">
             Sentinel
           </h1>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            지갑 주소를 등록하면 감시망을 설계해 배치합니다.
-          </p>
         </header>
 
         <div className="flex flex-col gap-6">
-          <WalletForm />
+          <GuardPanel />
           <LogTable />
         </div>
       </main>

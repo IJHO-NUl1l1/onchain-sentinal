@@ -33,16 +33,18 @@ const SEVERITY_LABEL: Record<Severity, string> = {
   critical: "긴급",
 };
 
-const SEVERITY_STYLE: Record<Severity, string> = {
-  low: "text-zinc-500 dark:text-zinc-400",
-  medium: "text-amber-600 dark:text-amber-500",
-  high: "text-orange-600 dark:text-orange-500",
-  critical: "text-red-600 dark:text-red-500",
+// 텍스트를 색칠하는 대신 왼쪽 바 하나로만 심각도를 표시 — 한 번에 여러 색이
+// 눈에 들어오지 않게.
+const SEVERITY_BAR: Record<Severity, string> = {
+  low: "bg-zinc-300 dark:bg-zinc-700",
+  medium: "bg-amber-500",
+  high: "bg-orange-500",
+  critical: "bg-red-500",
 };
 
 export function LogTable() {
   return (
-    <section className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-6">
+    <section className="rounded-lg border border-zinc-200 dark:border-zinc-800 p-6">
       <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-4">
         판단 로그
       </h2>
@@ -54,23 +56,24 @@ export function LogTable() {
       ) : (
         <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
           {PLACEHOLDER_LOGS.map((log) => (
-            <li key={log.timestamp} className="py-3 first:pt-0 last:pb-0">
-              <div className="flex items-baseline justify-between gap-4">
-                <span className="text-sm text-zinc-900 dark:text-zinc-100">
-                  {log.diagnosis}
-                </span>
-                <span
-                  className={`text-xs font-medium shrink-0 ${SEVERITY_STYLE[log.severity]}`}
-                >
-                  {SEVERITY_LABEL[log.severity]}
-                </span>
+            <li key={log.timestamp} className="flex gap-3 py-3 first:pt-0 last:pb-0">
+              <span className={`w-1 shrink-0 rounded-sm ${SEVERITY_BAR[log.severity]}`} />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline justify-between gap-4">
+                  <span className="text-sm text-zinc-900 dark:text-zinc-100">
+                    {log.diagnosis}
+                  </span>
+                  <span className="shrink-0 text-xs text-zinc-400 dark:text-zinc-600">
+                    {SEVERITY_LABEL[log.severity]}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                  {log.action} — {log.rationale}
+                </p>
+                <p className="mt-1 font-mono text-xs text-zinc-400 dark:text-zinc-600">
+                  {log.timestamp}
+                </p>
               </div>
-              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                {log.action} — {log.rationale}
-              </p>
-              <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-600 font-mono">
-                {log.timestamp}
-              </p>
             </li>
           ))}
         </ul>
