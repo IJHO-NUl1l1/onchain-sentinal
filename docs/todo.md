@@ -84,8 +84,11 @@
 > **스코프 밸브** — 밀리면 버리는 순서: ①Marketplace 등록 ②Safe+Zodiac ③대시보드 완성도
 > **사수**: 첫 tx / Phase0 자동 생성 데모 / tx 해시 증빙 (이 셋이 우리 주장의 전부)
 
-- [ ] KeeperHubExecutor - `provisionMonitoring` (`create_workflow`로 감시망 생성)
-- [ ] KeeperHubExecutor - `execute` (`execute_check_and_execute` / `execute_protocol_action`)
+- [~] KeeperHubExecutor - `provisionMonitoring`/`execute` 코드 구현 (8/9) — `@modelcontextprotocol/sdk`로
+      MCP HTTP 헤드리스 연결(`Bearer kh_...`). 워크플로우 node/edge 구조는 실제 "Aave Health Factor
+      Monitor" 워크플로우를 `list_workflows`로 조회해 그대로 참고(지어내지 않음).
+      `execute`는 `execute_protocol_action`으로 액션 enum → `aave-v3/*` 매핑(architecture.md §10).
+      **미완**: `.env`의 `KEEPERHUB_API_KEY` 채워지면 실제 연결 테스트 필요 — 지금은 tsc/build만 통과.
 - [ ] Phase 0 데모: 지갑 분석 → 워크플로우 자동 생성 시연
 - [ ] Phase 2 반자동 데모: 사건 투입 → Claude 진단 → 대응
 - [ ] (선택·1순위 폐기 대상) Marketplace 등록으로 "실제 호출 가능" 시연
