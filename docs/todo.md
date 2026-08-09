@@ -69,10 +69,24 @@
 - [x] Executor 인터페이스 정의 (`provisionMonitoring`, `execute`) (8/8) — `app/executors/types.ts`.
       `keeperhub.ts`/`flare.ts`는 인터페이스 구현 스켈레톤만(메서드는 throw) — 실제 호출부는 각각 Phase C/D.
 - [x] **액션 enum 확정 (8/9)** — 상세는 architecture.md §10. `app/executors/types.ts`의 `ActionType`에 반영.
-- [~] Agent 로직 - analyzer (지갑 조회 → 리스크 프로파일) (8/8) — 파일·시그니처만, 본문은 미구현
-- [~] Agent 로직 - diagnoser (사건 → 진단) (8/8) — 파일·시그니처만, 본문은 미구현
-- [~] Agent 로직 - strategist (진단 → 액션 enum 선택) (8/8) — 파일·시그니처만, 본문은 미구현
-- [ ] 프롬프트 템플릿 초안 — 이제 액션 enum 확정됐으니 착수 가능
+- [~] Agent 로직 - analyzer (지갑 조회 → 리스크 프로파일) ← 지금 진행 (8/9)
+      viem으로 실제 온체인 조회. 현재 스코프: 네이티브 잔고만(Aave 포지션은 별도 후속 — 아래 참고)
+- [ ] 프롬프트 템플릿 초안 ← 지금 진행 (8/9)
+
+**8/9 스코프 조정 (diagnoser/strategist 코드 구현 후순위로 미룸):**
+"판단"의 실체는 Claude가 프롬프트를 읽고 하는 것이지, `.ts` 함수 안의 로직이 아니다
+(architecture.md "런타임: Claude Desktop/Code + MCP, API+서버는 로드맵" / CLAUDE.md 핵심 원칙).
+그래서 지금 채워야 하는 건 diagnoser.ts/strategist.ts의 함수 바디가 아니라 **프롬프트 내용**이다.
+- [ ] Agent 로직 - diagnoser 함수 바디 구현 — **로드맵으로 이동.** API+서버 붙일 때(Claude API 호출)
+      실제 구현. 지금은 `throw` 스텁 유지, 반자동 데모(Phase C)는 사람이 Claude Code 세션에
+      프롬프트를 직접 넣는 방식으로 진행.
+- [ ] Agent 로직 - strategist 함수 바디 구현 — 위와 동일, 로드맵.
+
+**analyzer의 Aave 포지션 조회 후속 항목 (지금 스코프 아님, 별도로 처리):**
+- [ ] MVP 감시 범위(Aave v3) 최종 확인 — 아직 "결정 대기" 상태지만 액션 enum이 이미 aave-v3
+      기준으로 확정돼 있어 사실상 기정사실에 가까움
+- [ ] Aave v3 Pool 컨트랙트 주소(Sepolia) 확보 — architecture.md에 없는 값이라 지어내지 않음.
+      필요해지면 사용자에게 확인 요청 또는 공식 문서 조회 승인 받고 진행
 
 ## Phase C — KeeperHub 버전 (8/9-8/12) 🔵
 
