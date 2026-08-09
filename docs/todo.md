@@ -16,12 +16,8 @@
 - 🟠 Flare: **8/15 04:59** (간극 약 34h)
 - 🟣 CTC: 9/6 (8/13 이후 착수)
 
-**8/6 기준: 원안 대비 약 3~4일 지연.** 오늘이 D5인데 아직 Phase A(셋업) 진행 중이고 코드 0줄.
-개정 일정은 architecture.md 8장. 압축 포인트 = Phase B(공유 뼈대)를 5일 → **2일(8/7-8/8)**.
-
-**오늘(8/6) 반드시 할 것:** ①오피스아워(마지막 회차) ②첫 tx ③레포 구조 결정
-
-**8/8 갱신: 첫 tx 뚫음.** Phase A 사실상 마무리 단계 — 남은 건 레포 구조 결정(Phase B 진입 조건) 뿐.
+**8/9 기준: Phase A·B 완료, Phase C 진입.** 원안 대비 있었던 3~4일 지연(8/6 시점)은 Phase B를
+8/7-8/9로 압축해 흡수했다 — 개정 일정은 architecture.md 8장 참조. 다음 = KeeperHubExecutor 실구현.
 
 ---
 
@@ -58,7 +54,7 @@
       - [x] 두 번째 기기: nvm-windows 설치 → `nvm install 24.15.0` → `nvm use 24.15.0` 확인 (8/8)
             (기기2엔 Node/npm/claude CLI 자체가 없어서 처음부터 설치. `npm install --prefix app`도 완료)
 
-## Phase B — 공유 뼈대 (8/7-8/8, 압축) 🟢
+## Phase B — 공유 뼈대 (8/7-8/9, 압축) 🟢
 
 - [x] **⛔ 레포 구조 결정 (선행)** (8/8) — `app/` 안에 통합 (Next 스캐폴드와 같은 프로젝트, `@/*` 별칭 사용):
       `app/agent/`(analyzer·diagnoser·strategist·types·prompts/), `app/executors/`(types·keeperhub·flare),
@@ -76,20 +72,12 @@
 - [x] 프롬프트 템플릿 초안 (8/9) — `prompts/diagnoser.md`(사건→severity/diagnosis),
       `prompts/strategist.md`(진단→액션, enum 표 포함해 이탈 방지)
 
-**8/9 스코프 조정 (diagnoser/strategist 코드 구현 후순위로 미룸):**
-"판단"의 실체는 Claude가 프롬프트를 읽고 하는 것이지, `.ts` 함수 안의 로직이 아니다
-(architecture.md "런타임: Claude Desktop/Code + MCP, API+서버는 로드맵" / CLAUDE.md 핵심 원칙).
-그래서 지금 채워야 하는 건 diagnoser.ts/strategist.ts의 함수 바디가 아니라 **프롬프트 내용**이다.
-- [ ] Agent 로직 - diagnoser 함수 바디 구현 — **로드맵으로 이동.** API+서버 붙일 때(Claude API 호출)
-      실제 구현. 지금은 `throw` 스텁 유지, 반자동 데모(Phase C)는 사람이 Claude Code 세션에
-      프롬프트를 직접 넣는 방식으로 진행.
-- [ ] Agent 로직 - strategist 함수 바디 구현 — 위와 동일, 로드맵.
-
-**analyzer의 Aave 포지션 조회 후속 항목 (지금 스코프 아님, 별도로 처리):**
-- [ ] MVP 감시 범위(Aave v3) 최종 확인 — 아직 "결정 대기" 상태지만 액션 enum이 이미 aave-v3
-      기준으로 확정돼 있어 사실상 기정사실에 가까움
-- [ ] Aave v3 Pool 컨트랙트 주소(Sepolia) 확보 — architecture.md에 없는 값이라 지어내지 않음.
-      필요해지면 사용자에게 확인 요청 또는 공식 문서 조회 승인 받고 진행
+**로드맵으로 미룬 것 (8/9 스코프 조정):** "판단"의 실체는 Claude가 프롬프트를 읽고 하는 것이지
+`.ts` 함수 안의 로직이 아니다(architecture.md "런타임: Claude Desktop/Code + MCP, API+서버는 로드맵").
+- [ ] diagnoser/strategist 함수 바디의 실제 Claude API 호출 — API+서버 붙일 때. 지금은 `throw` 스텁
+      유지, 반자동 데모(Phase C)는 사람이 Claude Code 세션에 프롬프트를 직접 넣는 방식으로 진행.
+- [ ] analyzer의 Aave v3 포지션 조회 — Sepolia Pool 컨트랙트 주소가 architecture.md에 없어서 보류
+      (MVP 감시 범위 확정 여부는 "결정 대기" 참조)
 
 ## Phase C — KeeperHub 버전 (8/9-8/12) 🔵
 
@@ -101,7 +89,6 @@
 - [ ] Phase 0 데모: 지갑 분석 → 워크플로우 자동 생성 시연
 - [ ] Phase 2 반자동 데모: 사건 투입 → Claude 진단 → 대응
 - [ ] (선택·1순위 폐기 대상) Marketplace 등록으로 "실제 호출 가능" 시연
-- [ ] **8/6 오피스아워에서 컨셉·구현 검증 ← 오늘이 마지막 회차**
 - [ ] 데모 영상 촬영 + 편집
       ※ ⚠️ 스폰서 tx는 지갑 주소 거래목록에 안 뜬다. "지갑 열어 잔고 확인" 연출 불가.
         **tx 해시 → Internal Transactions 탭** 구성으로 촬영할 것 (architecture.md 3장)
@@ -135,19 +122,21 @@
 
 ## 결정 대기 (우리가 정할 것)
 - [x] 액션 enum 최종 목록 (8/9, architecture.md §10 / app/executors/types.ts)
-- [ ] MVP 감시 범위 (KH=Aave v3 유력 / Flare=담보볼트)
+- [x] 제출 tx를 메인넷으로 낼지 — architecture.md §3에 결론 있음: 테스트넷 기본(스폰서 대상,
+      크레딧 안 먹음) + 제출용 1~2건만 메인넷 권장
+- [ ] MVP 감시 범위 확정 (KH=Aave v3 / Flare=담보볼트) — 액션 enum이 이미 aave-v3 기준이라
+      사실상 기정사실에 가깝지만, 공식적으로 체크는 안 된 상태
 - [ ] 데모 시나리오 자산·급락 연출 방법
 - [ ] 두 마감 타임존 최종 확인
-- [ ] ★ Safe + Zodiac Roles 채택 여부 (온체인 액션 화이트리스트 ↔ 가스 스폰서십 배타. 첫 tx 이후 판단)
+- [ ] ★ Safe + Zodiac Roles 채택 여부 (온체인 액션 화이트리스트 ↔ 가스 스폰서십 배타. 첫 tx는 끝났으니
+      지금이 판단 시점)
 - [ ] 스폰서십 vs private routing 택일 (동시 사용 불가)
-- [ ] 제출 tx를 메인넷으로 낼지 (테스트넷도 스폰서 대상이고 크레딧 무료)
 
 ---
 
 ## 최근 작업 로그
 > 각자 세션 끝날 때 한 줄씩. 무엇을 했고 다음이 뭔지.
 
-- (예시) 8/6 데스크탑: 문서 3종 초기화, Git 세팅. 다음 = Phase A 셋업 시작.
 - 8/6: 기초 정비. `.gitignore` 복구(시크릿 보호가 안 되던 상태였음), `.gitattributes`/`.nvmrc`(24.15.0)/`.env.example`/`contracts/.gitkeep` 추가. Next 스캐폴드 빌드 통과 확인(16.3.0).
   다음 = ①두 번째 기기 clone·환경 맞추기 ②레포 구조 결정(에이전트/executor 코드가 들어갈 자리) ③Phase A KeeperHub MCP 연결(기기별로 각각 `claude mcp add` 필요).
 - 8/6: KeeperHub 계정 생성 + MCP 연결·OAuth 완료(`Connected to keeperhub`). 등록은 `--scope user`(`~/.claude.json`).
@@ -164,3 +153,10 @@
   Sepolia 파우셋(개인 계정 경유) + Coston2 파우셋(100 C2FLR) 확보, **★첫 tx 성공**까지 한 세션에 완료.
   Phase A 사실상 종료 — 남은 건 `.env` 값 이전(Phase B 코드 작성 시점에) 뿐.
   다음 = Phase B 진입 전 **레포 구조 결정**(architecture.md 6장 표 기준으로 `app/` 안에 agent·executors 자리 정하기) → Executor 인터페이스.
+- 8/9 기기2: Phase B 완주 — 레포 구조(`app/agent`, `app/executors`) → Executor 인터페이스 →
+  대시보드 골격(무채색, 백엔드 미연결) → 액션 enum(`search_protocol_actions` 실사 기반 7종) →
+  analyzer 실구현(viem, 실제 잔고 조회 검증) → diagnoser/strategist 프롬프트 초안.
+  diagnoser/strategist 함수 바디는 의도적으로 로드맵行(실제 판단은 Claude API 붙는 단계에서).
+  문서 정리: todo.md의 층층이 쌓인 날짜별 메모 통합, 지난 날짜라 더 이상 실행 불가능한 항목(8/6
+  오피스아워) 삭제, "결정 대기"와 Phase B 후속 메모 중복 제거, architecture.md §8 완료 표시.
+  다음 = Phase C: KeeperHubExecutor 실구현.

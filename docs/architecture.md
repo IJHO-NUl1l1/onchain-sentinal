@@ -304,15 +304,14 @@ claude mcp add --transport http --scope user keeperhub https://app.keeperhub.com
 
 ## 8. 일정 (KeeperHub 8/13 19:00 / Flare 8/15 04:59, 간극 ~34h)
 
-**⚠️ 8/6 개정.** 원안은 D1이 8/2인 14일 계획이었고 오늘(8/6)이면 D5 — 공유 뼈대가 올라와 있어야 할 시점이다.
-실제로는 오늘에서야 D1-2(셋업)를 진행 중이고 **첫 tx 미완, 코드 0줄. 약 3~4일 지연.**
-남은 시간은 KeeperHub까지 7일. 원안의 **형태는 유지하고 앞부분(D3-5, 5일→2일)을 압축**한다.
+**8/6 개정, 8/9 갱신.** 원안(D1=8/2, 14일 계획) 대비 8/6 시점에 3~4일 지연이 있었으나,
+아래 D3-5 압축안대로 Phase A·B를 8/9에 마쳐 흡수했다 (진행상황은 docs/todo.md).
 
 ```
 8/6(목)  ★첫 tx 뚫기: Sepolia 파우셋 → execute_transfer simulate → 실행 → transactionHash
-         + 오피스아워(오늘이 마지막) + 레포 구조 결정(코드 쓰기 전 필수)
-8/7-8/8  🟢 공유 뼈대: Executor 인터페이스 / analyzer·diagnoser·strategist / 액션 enum 확정
-         대시보드는 "실행 증명"에 필요한 최소한만. 여기서 화려함을 좇으면 전체가 무너진다
+         + 레포 구조 결정(코드 쓰기 전 필수) — 완료
+8/7-8/9  🟢 공유 뼈대: Executor 인터페이스 / analyzer·diagnoser·strategist / 액션 enum 확정
+         대시보드는 "실행 증명"에 필요한 최소한만. 여기서 화려함을 좇으면 전체가 무너진다 — 완료
 8/9-8/10 🔵 KeeperHub Phase0(지갑 분석 → create_workflow 자동 생성) + Phase2 반자동 데모
 8/11-8/12 🔵 영상·README·제출 준비 ▷ 병렬: 🟠 SentinelVault.sol 착수
          여유가 나면 이 시점에 Safe+Zodiac 채택 판단 (10장)
