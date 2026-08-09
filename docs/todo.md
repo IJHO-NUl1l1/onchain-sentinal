@@ -17,8 +17,12 @@
 - 🟠 Flare: **8/15 04:59** (간극 약 34h)
 - 🟣 CTC: 9/6 (8/13 이후 착수)
 
-**8/9 기준: Phase A·B 완료, Phase C 진입.** 원안 대비 있었던 3~4일 지연(8/6 시점)은 Phase B를
-8/7-8/9로 압축해 흡수했다 — 개정 일정은 architecture.md 8장 참조. 다음 = KeeperHubExecutor 실구현.
+**8/9 기준: Phase A·B 완료, Phase C·D 동시 진행중.** 원안 대비 있었던 3~4일 지연(8/6 시점)은 Phase B를
+8/7-8/9로 압축해 흡수했다 — 개정 일정은 architecture.md 8장 참조.
+
+**다음 세션 시작점 (8/9 세션 종료 시점 기준) — 아래 "최근 작업 로그" 맨 마지막 항목 필독:**
+Base(KeeperHub 쪽)에 자금 준비하고 `execute()` 라이브 검증 → Flare `FlareExecutor` 연결 →
+두 트랙 다 데모 영상·README. 상세는 로그 참조.
 
 ---
 
@@ -61,8 +65,9 @@
       `app/agent/`(analyzer·diagnoser·strategist·types·prompts/), `app/executors/`(types·keeperhub·flare),
       `app/lib/`(공용, 아직 빈 상태). `contracts/`는 Phase D까지 별개 그대로.
 - [x] Next.js 대시보드 골격 (지갑 주소 등록 / 로그 뷰) (8/9) — UI만, 백엔드 미연결.
-      `_components/wallet-form.tsx`(지갑 입력, 로컬 state만) + `log-table.tsx`(플레이스홀더 로그).
-      색 최소화(무채색 + 심각도 라벨만 절제된 색), 네온/그라디언트 없음.
+      `_components/guard-panel.tsx`(방패 아이콘, 감시 상태 표시 + 지갑 입력) + `log-table.tsx`(플레이스홀더 로그).
+      색 최소화(무채색 + 심각도는 왼쪽 바 색으로만, 에메랄드 1색 강조), 네온/그라디언트 없음.
+      ※ 원래 이름은 `wallet-form.tsx`였는데 이후(Phase C) `guard-panel.tsx`로 리디자인+실제 백엔드 연결됨 — 아래 참조.
 - [x] Executor 인터페이스 정의 (`provisionMonitoring`, `execute`) (8/8) — `app/executors/types.ts`.
       `keeperhub.ts`/`flare.ts`는 인터페이스 구현 스켈레톤만(메서드는 throw) — 실제 호출부는 각각 Phase C/D.
 - [x] **액션 enum 확정 (8/9)** — 상세는 architecture.md §10. `app/executors/types.ts`의 `ActionType`에 반영.
@@ -168,8 +173,9 @@
 - [x] 액션 enum 최종 목록 (8/9, architecture.md §10 / app/executors/types.ts)
 - [x] 제출 tx를 메인넷으로 낼지 — architecture.md §3에 결론 있음: 테스트넷 기본(스폰서 대상,
       크레딧 안 먹음) + 제출용 1~2건만 메인넷 권장
-- [ ] MVP 감시 범위 확정 (KH=Aave v3 / Flare=담보볼트) — 액션 enum이 이미 aave-v3 기준이라
-      사실상 기정사실에 가깝지만, 공식적으로 체크는 안 된 상태
+- [x] MVP 감시 범위 확정 (8/9) — KH=Aave v3(코드로 확정: `analyzer.getAaveAccountData`,
+      액션 enum), Flare=FTSO 가격 기반 담보 정책(`SentinelVault.setPolicy`). 둘 다 이미
+      실제 코드/배포로 구현됐으니 더 논의할 필요 없이 확정된 것으로 처리.
 - [ ] 데모 시나리오 자산·급락 연출 방법
 - [x] 두 마감 타임존 최종 확인 (8/9) — KeeperHub 8/13 19:00 KST 확정. Flare는 기존 8/15 04:59 유지
       (별도 재확인 필요시 진행)
@@ -207,3 +213,40 @@
   문서 정리: todo.md의 층층이 쌓인 날짜별 메모 통합, 지난 날짜라 더 이상 실행 불가능한 항목(8/6
   오피스아워) 삭제, "결정 대기"와 Phase B 후속 메모 중복 제거, architecture.md §8 완료 표시.
   다음 = Phase C: KeeperHubExecutor 실구현.
+- 8/9 기기2 (긴 세션, 이어서): 아주 많이 진행됨 — 순서대로:
+  ①`KeeperHubExecutor` 실구현(MCP HTTP, `provisionMonitoring`/`execute`) + 버그 2개 수정
+  (응답 파싱이 KeeperHub의 중첩 success/error를 못 보던 것, `aave-v3/supply`의 `referralCode`
+  누락 함정) ②대시보드를 실제 백엔드에 연결(`_actions/register-wallet.ts` Server Action,
+  `guard-panel.tsx`로 UI 리디자인) — 브라우저에서 실제 워크플로우 생성까지 검증됨
+  ③`npm run demo:phase0`/`demo:execute` 스크립트 ④**architecture.md §0-1 "핵심 판단 기준"
+  신설** — "①실데이터 조회 ②agent가 그걸로 실제 진단" 두 가지만이 완성/미완성을 가르는
+  기준이라고 확정, README 등 앞으로 모든 문서가 이 기준으로 서술되도록 CLAUDE.md에도 반영
+  ⑤`SUPPLY_COLLATERAL`을 Sepolia에서 실행하려다 몇 시간 삽질 끝에 **KeeperHub의 Aave v3
+  연동이 Sepolia를 아예 지원 안 한다**(Ethereum/Base/Arbitrum/Optimism 메인넷만)는 걸 확인 —
+  Base에서 소액 real fund로 검증하기로 함(사용자가 업비트에서 준비 중, **아직 완료 안 됨**)
+  ⑥`analyzer.ts`에 `getAaveAccountData()` 추가(Base 실제 헬스팩터/담보/부채 조회, view라
+  자금 없이도 됨) — 실행 지갑으로 실증(담보/부채 0, 헬스팩터 무한대) ⑦그 실데이터를
+  `prompts/diagnoser.md`→`prompts/strategist.md`에 처음으로 실제 태워봄 → `NO_ACTION` 산출
+  — **프로젝트 최초로 §0-1 두 축이 KeeperHub 쪽에서 끝까지 돈 사례** ⑧Flare로 넘어가서
+  `flare-hardhat-starter` 세팅(원본은 의존성 충돌 나서 최소 구성으로 재구성, Hardhat 3) →
+  `SentinelVault.sol` MVP 작성(정책저장+`checkAndExecute`+`agentRespond`) → **Coston2 실배포**
+  (`0xBf5778109e894b7C093D91B8a7518c95Fe74c3EF`) → `setPolicy`/`checkAndExecute` 실행해서
+  **Flare 쪽도 §0-1 두 축 실증** (진짜 FTSO 가격 읽고 컨트랙트가 직접 판단). 가는 길에 가스
+  자동견적 out-of-gas 버그도 잡음(명시적 gasLimit 필요) ⑨architecture.md의 잘못된 레퍼런스
+  (`PriceTriggeredSafe`/`AssetVault` — 실제로 없는 예제였음) 발견해서 정정.
+
+  **다음 세션(다른 기기)이 알아야 할 것:**
+  - `contracts/.env`는 새로 생긴 파일이라 **이 기기에서도 새로 채워야 함** — `DEPLOYER_PRIVATE_KEY`
+    (개인 지갑 `0x6Bc68c...809c` 재사용 중, Coston2 배포+agentRespond 서명용) + `COSTON2_RPC_URL`.
+    루트 `.env`/`app/.env`와 별개 파일이다 (`contracts/.env.example` 참조)
+  - `contracts/`도 `npm install` 새로 필요 (`app/`과 별개 node_modules)
+  - **막혀있는 지점**: KeeperHub `execute()` 라이브 검증이 Base 자금(업비트에서 사서 개인
+    지갑 경유 → 실행 지갑 `0x2b33...BcE3`로) 준비를 기다리는 중. 자금 준비되면
+    `npm run demo:execute -- SUPPLY_COLLATERAL '{...}'` (network를 Base로, architecture.md
+    §3 참조)로 이어가면 됨
+  - Flare는 `FlareExecutor.ts`가 아직 `throw` 스텁 — `contracts/scripts/demo-provision-and-check.ts`
+    처럼 Hardhat 스크립트로 직접 호출한 거지, 우리 Executor 인터페이스를 아직 안 거침. 다음 단계로
+    `setPolicy`/`agentRespond`를 `ethers`로 감싸면 됨
+  - 데모 영상·README는 두 트랙 다 0% — architecture.md §0-1을 중심으로 써야 함(CLAUDE.md 규칙)
+  - 남은 "결정 대기": Safe+Zodiac(스킵 추천), 스폰서십 vs private routing(스폰서십 추천),
+    데모 시나리오 자산·급락 연출

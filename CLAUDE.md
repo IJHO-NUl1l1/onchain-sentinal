@@ -85,6 +85,9 @@
 - KeeperHub 전용 코드는 `executors/keeperhub.ts`에, Flare 전용은 `executors/flare.ts`와 컨트랙트에만.
 - 작업을 끝내면 `docs/todo.md`의 해당 항목을 업데이트하고 커밋하라. (두 기기가 이걸로 동기화한다)
 - todo를 업데이트할 때 `architecture.md`를 건드리지 마라. 성격이 다른 문서다.
+  예외: `architecture.md` §0-1 "현재 상태" 체크리스트는 그 섹션 자체가 "todo.md와 별개로
+  여기서도 추적"한다고 명시된 의도적 중복이라, 같이 갱신해도 된다. 그 외 섹션(확정 기술
+  스펙 등)은 진행상황이 아니라 "정정"이 필요할 때만(예: 문서 값이 실제와 달랐던 걸 발견) 건드릴 것.
 
 ---
 
@@ -95,12 +98,16 @@
 - Node 버전(`.nvmrc` = 24.15.0), EVM 버전(cancun) 등 환경을 두 기기에서 동일하게 유지.
 
 **git이 안 옮겨주는 것 — 기기마다 따로 해야 한다:**
-- `.env` 실제 키값 (`.gitignore`로 차단. `copy .env.example app\.env` 후 안전한 경로로 값 이전 —
-  루트 아니라 `app/.env`여야 Next.js/노드가 읽는다)
+- `.env` 실제 키값 — **파일이 두 개다, 둘 다 따로 채워야 함**:
+  - `app/.env` (`copy .env.example app\.env`) — Next.js/노드가 루트 `.env`는 안 읽는다
+  - `contracts/.env` (`copy contracts\.env.example contracts\.env`, 8/9 추가) — `DEPLOYER_PRIVATE_KEY` +
+    `COSTON2_RPC_URL`. Hardhat이 `contracts/` 기준으로 읽는다. 배포·컨트랙트 함수 호출(agentRespond
+    서명)에 계속 쓰이는 키다
 - KeeperHub MCP 연결 (`--scope user`라 `~/.claude.json`에 저장)
   → `claude mcp add --transport http --scope user keeperhub https://app.keeperhub.com/mcp`
   → **Claude Code 세션 안에서** `/mcp` 로 OAuth. `claude mcp list`로 `Connected` 확인
-- `node_modules/` → `npm install --prefix app`
+- `node_modules/` → `npm install --prefix app` **그리고** `npm install --prefix contracts` (8/9 추가,
+  둘이 완전히 별개 프로젝트라 각각 설치해야 함)
 
 ---
 
