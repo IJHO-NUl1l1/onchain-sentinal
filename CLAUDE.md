@@ -85,7 +85,8 @@
 - Node 버전(`.nvmrc` = 24.15.0), EVM 버전(cancun) 등 환경을 두 기기에서 동일하게 유지.
 
 **git이 안 옮겨주는 것 — 기기마다 따로 해야 한다:**
-- `.env` 실제 키값 (`.gitignore`로 차단. `copy .env.example .env` 후 안전한 경로로 값 이전)
+- `.env` 실제 키값 (`.gitignore`로 차단. `copy .env.example app\.env` 후 안전한 경로로 값 이전 —
+  루트 아니라 `app/.env`여야 Next.js/노드가 읽는다)
 - KeeperHub MCP 연결 (`--scope user`라 `~/.claude.json`에 저장)
   → `claude mcp add --transport http --scope user keeperhub https://app.keeperhub.com/mcp`
   → **Claude Code 세션 안에서** `/mcp` 로 OAuth. `claude mcp list`로 `Connected` 확인
