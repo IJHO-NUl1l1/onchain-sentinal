@@ -135,8 +135,11 @@
       (즉시방어/에스컬레이션 분기) + 화이트리스트 `agentRespond`. ActionType enum을
       `app/executors/types.ts`와 이름·순서 동일하게 맞춤. **컴파일 성공.**
 - [x] FtsoV2 피드 조회 통합 (`getFeedById`) (8/9) — `ContractRegistry.getTestFtsoV2()` 실제 컴파일 확인
-- [x] 즉시방어 / 에스컬레이션 분기 로직 (최소 성립선) (8/9) — 코드 작성 완료, **아직 Coston2에 배포 후
-      실동작 검증은 안 함**
+- [x] 즉시방어 / 에스컬레이션 분기 로직 (최소 성립선) (8/9) — **실동작 검증 완료.**
+      `npm run demo:coston2`(contracts/): `setPolicy`가 실제 FTSO FLR/USD 가격을 기록,
+      `checkAndExecute`가 그 값으로 실제 판단(정상 상태 → 조용히 통과). architecture.md §0-1
+      참조 — Flare 버전도 "실데이터+판단" 두 축 증명됨.
+      ⚠️ 함정: `checkAndExecute` 가스 자동견적 불안정(out-of-gas) — 명시적 gasLimit 필수(§3 기록).
 - [ ] Volatility Incentive (`offerIncentive`) 통합 ★차별화 — 의도적으로 미룸.
       `IFastUpdateIncentiveManager.offerIncentive()`가 커스텀 fixed-point 타입(Range/SampleSize)을
       요구해서, 지어내지 않고 제대로 조사한 뒤 붙일 것

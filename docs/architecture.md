@@ -67,6 +67,12 @@
       진단했다는 점이 중요 — 가짜 위기를 지어내지 않음.
       **남은 것**: 실제 포지션이 있을 때(담보 공급 후) medium/high severity 진단도 실제로 나오는지 확인
       (Base에 자금 준비 후 진행)
+- [x] **Flare 버전도 두 축 실증 (8/9)** — `SentinelVault.sol`을 Coston2에 배포
+      (`0xBf5778109e894b7C093D91B8a7518c95Fe74c3EF`) 후 `setPolicy`/`checkAndExecute` 실행.
+      1번 축: 진짜 FTSO FLR/USD 가격을 온체인에서 읽음(호출마다 값이 바뀌는 걸로 확인).
+      2번 축: 이번엔 LLM이 아니라 **컨트랙트 자체가** 괴리율 계산해서 판단(정상 → 조용히 통과) —
+      Flare는 "명백한 케이스는 LLM 없이 컨트랙트가 판단"하는 구조라 이게 맞는 그림.
+      상세는 §3 "SentinelVault.sol 배포 완료" 참조.
 
 ---
 
@@ -284,6 +290,19 @@ Aave v4는 대안이 아니다 — Ethereum 메인넷만 지원(L2 없음), 그�
 - agent(`agentRespond` 화이트리스트): `0x6Bc68c3C6d4D9B02E435dF25bBc22E59541C809c`
 - 익스플로러: https://coston2-explorer.flare.network/address/0xBf5778109e894b7C093D91B8a7518c95Fe74c3EF
 - `eth_getCode`로 실제 bytecode 존재 확인(빈 응답 아님)
+
+**✅ §0-1 두 축 Flare 버전 실증 완료 (8/9):** `npm run demo:coston2`(contracts/) —
+`setPolicy(FLR/USD, 5%)` → 실제 FTSO 가격을 anchorPrice로 기록(여러 번 실행할 때마다
+607524→607991→608025 등으로 계속 바뀜, 살아있는 데이터 확인) → `checkAndExecute` 실행 →
+정상 상태에서 `isLocked: false`로 조용히 통과. **KeeperHub 쪽과 마찬가지로 Flare에서도
+"진짜 온체인 데이터 → 컨트랙트가 직접 판단"까지 실증됨.**
+
+**⚠️ 함정(8/9 실증): `checkAndExecute` 가스 자동 견적이 불안정하다.** FLR/USD 같은 FTSOv2
+Block Latency Feed는 매 블록(~1.8초)마다 갱신되는데, ethers의 자동 gas estimate 시점과
+실제 채굴 시점 사이에 가격이 바뀌면 더 비싼 코드 경로(SSTORE 등)를 타면서 견적이 빗나가
+**사유 없는 revert(out-of-gas)**가 난다. `tx.gas === receipt.gasUsed`로 확인 가능.
+→ **시간에 민감한 FTSO 기반 함수 호출은 항상 명시적 `gasLimit`을 줄 것** (KeeperHub의
+"시간민감 트리거는 보수 배수" 함정과 같은 종류). `contracts/scripts/demo-provision-and-check.ts` 참조.
 
 **★ Volatility Incentive (킬러 기능):**
 - 컨트랙트 `FastUpdateIncentiveManager` (인터페이스 `IFastUpdateIncentiveManager`, ContractRegistry로 조회)

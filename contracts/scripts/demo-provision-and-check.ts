@@ -1,0 +1,47 @@
+import { network } from "hardhat";
+
+// Phase 0/1 데모용 러너 (Flare): setPolicy → checkAndExecute를 실제 Coston2에서 실행.
+// docs/architecture.md §0-1 두 축(실 FTSO 데이터 + 온체인 판단)을 증명하는 스크립트.
+//
+// ⚠️ 가스 견적 함정(8/9 실증): FLR/USD는 매 블록(~1.8초) 갱신되는 피드라, ethers의
+// 자동 gas estimate 시점과 실제 채굴 시점 사이에 가격이 바뀌면서 더 비싼 코드 경로를
+// 타 추정치가 빗나갈 수 있다(out-of-gas, 사유 없는 revert). checkAndExecute는 항상
+// 명시적 gasLimit을 준다 — FlareExecutor 구현 시에도 동일하게 적용할 것.
+
+const FLR_USD_FEED_ID = "0x01464c522f55534400000000000000000000000000"; // "FLR/USD", 21 bytes
+const VAULT_ADDRESS = "0xBf5778109e894b7C093D91B8a7518c95Fe74c3EF";
+const CHECK_GAS_LIMIT = 300_000n;
+
+async function main() {
+  const { ethers } = await network.create({ network: "coston2", chainType: "l1" });
+  const [signer] = await ethers.getSigners();
+  const vault = await ethers.getContractAt("SentinelVault", VAULT_ADDRESS, signer);
+
+  console.log("[setPolicy] FLR/USD, threshold=500bips(5%)");
+  const tx1 = await vault.setPolicy(FLR_USD_FEED_ID, 500n, { gasLimit: CHECK_GAS_LIMIT });
+  await tx1.wait();
+  const policy = await vault.policies(signer.address);
+  console.log("[setPolicy] 완료 — 실제 FTSO 가격 기록됨: anchorPrice =", policy[1].toString());
+
+  console.log("[checkAndExecute] 실행");
+  const tx2 = await vault.checkAndExecute(signer.address, { gasLimit: CHECK_GAS_LIMIT });
+  const receipt = await tx2.wait();
+  console.log("[checkAndExecute] status:", receipt?.status, "tx:", receipt?.hash);
+
+  for (const log of receipt?.logs ?? []) {
+    try {
+      const parsed = vault.interface.parseLog(log);
+      if (parsed) console.log("[event]", parsed.name, parsed.args);
+    } catch {
+      // 이 컨트랙트가 낸 이벤트가 아님 (FTSO 시스템 컨트랙트 내부 로그 등)
+    }
+  }
+
+  const policyAfter = await vault.policies(signer.address);
+  console.log("[결과] isLocked:", policyAfter[3]);
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exitCode = 1;
+});
