@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { registerWallet } from "../_actions/register-wallet";
 
 function ShieldIcon({ className }: { className?: string }) {
   return (
@@ -20,12 +21,24 @@ function ShieldIcon({ className }: { className?: string }) {
 export function GuardPanel() {
   const [address, setAddress] = useState("");
   const [watched, setWatched] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!address.trim()) return;
-    // UI 골격 단계 — 실제 등록(analyzer 호출 등)은 Agent 로직 붙인 뒤 연결.
-    setWatched(address.trim());
+    const trimmed = address.trim();
+    if (!trimmed) return;
+
+    setError(null);
+    startTransition(async () => {
+      try {
+        await registerWallet(trimmed);
+        setWatched(trimmed);
+      } catch (err) {
+        setWatched(null);
+        setError(err instanceof Error ? err.message : "등록 중 오류가 발생했습니다.");
+      }
+    });
   }
 
   return (
@@ -44,9 +57,9 @@ export function GuardPanel() {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-              {watched ? "감시 중" : "미등록"}
+              {isPending ? "등록 중…" : watched ? "감시 중" : "미등록"}
             </span>
-            {watched && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
+            {watched && !isPending && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
           </div>
           {watched ? (
             <p className="mt-0.5 truncate font-mono text-sm text-zinc-500 dark:text-zinc-400">
@@ -67,15 +80,21 @@ export function GuardPanel() {
           onChange={(e) => setAddress(e.target.value)}
           placeholder="0x..."
           spellCheck={false}
-          className="flex-1 rounded-md border border-zinc-300 dark:border-zinc-700 bg-transparent px-3 py-2 text-sm font-mono outline-none focus:border-emerald-600/60 dark:focus:border-emerald-500/60"
+          disabled={isPending}
+          className="flex-1 rounded-md border border-zinc-300 dark:border-zinc-700 bg-transparent px-3 py-2 text-sm font-mono outline-none focus:border-emerald-600/60 dark:focus:border-emerald-500/60 disabled:opacity-50"
         />
         <button
           type="submit"
-          className="rounded-md bg-zinc-900 dark:bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-50 dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-300 transition-colors"
+          disabled={isPending}
+          className="rounded-md bg-zinc-900 dark:bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-50 dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-300 transition-colors disabled:opacity-50"
         >
-          {watched ? "변경" : "감시 시작"}
+          {isPending ? "등록 중…" : watched ? "변경" : "감시 시작"}
         </button>
       </form>
+
+      {error && (
+        <p className="mt-4 text-sm text-red-600 dark:text-red-500">{error}</p>
+      )}
     </section>
   );
 }
