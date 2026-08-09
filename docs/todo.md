@@ -100,6 +100,10 @@
 - [x] 대시보드 ↔ 백엔드 연결 (8/9) — `_actions/register-wallet.ts`(Server Action)로
       `analyzeWallet` → `provisionMonitoring` 연결. `guard-panel.tsx` "감시 시작" 버튼이
       이제 실제로 워크플로우를 생성함(로컬 state만 바꾸던 스텁에서 교체). pending/error 상태 추가.
+      **브라우저에서 실제 검증 완료** — 한 번도 안 써본 개인 지갑 주소(`0x6Bc68c...809c`)를
+      대시보드에 입력→클릭했더니 KeeperHub에 새 워크플로우(`sentinel-0x6Bc68c...809c`)가
+      실제로 생성됨(`list_workflows`로 확인). UI→Server Action→analyzer→executor→KeeperHub
+      전체 배선 살아있음 확인.
       판단 로그 자동 기록(Supabase)은 아직 — `log-table.tsx`는 계속 목업 데이터.
 - [~] Phase 0 데모: 지갑 분석 → 워크플로우 자동 생성 시연 (8/9) — `npm run demo:phase0 -- <주소>`로
       스크립트화, 실행 지갑으로 실제 검증 완료(`analyzeWallet` → `provisionMonitoring` 한 번에).
