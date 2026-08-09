@@ -1,4 +1,0 @@
-# SentinelVault.sol 이 들어올 자리 (Flare 🟠).
-# git은 빈 디렉터리를 추적하지 않아서, 두 번째 기기에 폴더가 생기도록 두는 placeholder다.
-# flare-foundry-starter / flare-hardhat-starter 를 여기에 붙인 뒤 이 파일은 지워도 된다.
-# ⚠️ EVM 버전 반드시 cancun (foundry.toml / hardhat.config)
