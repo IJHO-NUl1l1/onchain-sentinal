@@ -94,8 +94,14 @@
 - [~] KeeperHubExecutor - `execute` (8/9) — 코드는 구현됨(`execute_protocol_action`, 액션 enum →
       `aave-v3/*` 매핑, architecture.md §10). **아직 실제 실행은 안 해봄** — 진짜 supply/withdraw
       tx라 자금이 움직여서, 실제 검증은 데모 때 진행.
-- [ ] Phase 0 데모: 지갑 분석 → 워크플로우 자동 생성 시연
-- [ ] Phase 2 반자동 데모: 사건 투입 → Claude 진단 → 대응
+- [~] Phase 0 데모: 지갑 분석 → 워크플로우 자동 생성 시연 (8/9) — `npm run demo:phase0 -- <주소>`로
+      스크립트화, 실행 지갑으로 실제 검증 완료(`analyzeWallet` → `provisionMonitoring` 한 번에).
+      `idempotency_key`가 `provision-<주소>`라 같은 지갑 재실행해도 워크플로우 안 쌓임 — 리허설에 안전.
+      **남은 건 촬영뿐.**
+- [~] Phase 2 반자동 데모: 사건 투입 → Claude 진단 → 대응 (8/9) — 마지막 실행 단계용
+      `npm run demo:execute -- <ACTION_TYPE> '<params json>'` 스크립트 준비됨. 아직 실전 검증은
+      못 함(Aave Sepolia 테스트 포지션 필요, 아래 execute 검증과 동일 선행조건).
+      **남은 것**: ①데모 시나리오(사건) 확정 ②Aave 테스트 토큰 확보 후 실제 실행 ③촬영
 - [ ] (선택·1순위 폐기 대상) Marketplace 등록으로 "실제 호출 가능" 시연
 - [ ] 데모 영상 촬영 + 편집
       ※ ⚠️ 스폰서 tx는 지갑 주소 거래목록에 안 뜬다. "지갑 열어 잔고 확인" 연출 불가.
