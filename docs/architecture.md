@@ -177,6 +177,14 @@ claude mcp add --transport http --scope user keeperhub https://app.keeperhub.com
 
 **DeFi 프로토콜 액션:** `execute_protocol_action`, actionType = `protocol/action-slug` (예: `aave-v3/supply`, `aave-v3/repay`). `search_protocol_actions`로 발견.
 
+**⚠️ 8/9 실증: Aave v3 액션은 Sepolia를 지원하지 않는다.** KeeperHub Aave V3 플러그인 문서(사용자 제공)에 명시:
+"Supported chains: Ethereum, Base, Arbitrum, Optimism" — Sepolia 없음. `network: "11155111"`로 호출하면
+에러 없이 받아들여지고 실제 존재하는 Pool 주소(`0x6Ae43d...`, aave-address-book과 일치)로 tx까지 만들어지는데,
+`supply()` 자체가 원인 불명의 빈 revert로 실패한다 — 근본 원인은 "지원 안 되는 체인에서 억지로 시도"였다.
+**Aave 라이브 검증은 Ethereum/Base/Arbitrum/Optimism 중 하나(Base 권장 — 저가스)에서 해야 한다.**
+Aave v4는 대안이 아니다 — Ethereum 메인넷만 지원(L2 없음), 그것도 "Lido Spoke" 하나뿐이라 스테이블코인
+자산 자체가 없을 수 있고, `reserveId` 해석 단계까지 추가로 필요해서 v3보다 나쁜 선택.
+
 **워크플로우 JSON:** node `{id,type,data:{label,type,config}}`, edge `{id,source,target,sourceHandle?}`. 조건분기 sourceHandle `"true"`/`"false"`. 템플릿 `{{@nodeId:Label.field}}` (엄격 검증).
 
 **⚠️ 함정 (문서가 "undocumented"로 명시):**
@@ -191,6 +199,9 @@ claude mcp add --transport http --scope user keeperhub https://app.keeperhub.com
 9. `recipientAddress`는 **엄격한 EIP-55 체크섬 검증**. 대소문자 섞인 주소의 체크섬이 틀리면 거부(`Invalid recipient address`).
    → **전부 소문자로 넘기거나** 정확한 체크섬 형태로. 손으로 대소문자 고치지 말 것
 10. `kh_` 키에 스코프가 걸려 있으면 쓰기 작업에 **`mcp:write` 스코프** 필요 (없으면 403). 스코프 없는 키는 통과
+11. `execute_protocol_action`의 응답은 MCP `isError`가 아니라 **`content[0].text` 안의 JSON `{success, error}`로 실패를 알려준다** — `isError`만 보면 실패를 성공으로 오인함(8/9 실증, app/executors/keeperhub.ts의 `toTxResult` 참조)
+12. `web3/approve-token`은 **`execute_protocol_action`(직접 실행)을 지원 안 함** — "Direct execution not supported... Use workflow execution instead" 에러. 워크플로우로 만들어서 `execute_workflow`로 실행해야 함
+13. `aave-v3/supply`는 `referralCode`가 스키마상 optional인데 **실제로는 없으면 거부됨**("referralCode: uint16 is missing"). `"0"` 기본값 필요
 
 **직접 실행 안전 절차 (문서 명시, 반드시 이 순서):**
 1. `simulate: true`로 먼저 실행

@@ -91,12 +91,19 @@
       (id `0px5s4xgnxtcispelwgjy`) 실제 생성 확인(Schedule 트리거, aave-v3 헬스팩터 조회,
       network 11155111, enabled:true) — `list_workflows`로 재조회해 확인.
       ⚠️ `.env`는 레포 루트가 아니라 **`app/.env`**에 있어야 Next.js/노드가 읽는다 (기록해둠).
-- [~] KeeperHubExecutor - `execute` (8/9) — 코드는 구현됨(`execute_protocol_action`, 액션 enum →
-      `aave-v3/*` 매핑, architecture.md §10). **아직 실제 실행은 안 해봄** — 진짜 supply/withdraw
-      tx라 자금이 움직여서, 실제 검증은 데모 때 진행.
+- [~] KeeperHubExecutor - `execute` (8/9) — 코드 완성 + 버그 2개 수정(응답 파싱, referralCode 기본값 —
+      architecture.md §3 함정 11·13). `SUPPLY_COLLATERAL`을 Sepolia에서 실제로 시도하다가
+      **KeeperHub의 Aave v3는 Sepolia 미지원(Ethereum/Base/Arbitrum/Optimism만)**이라는 걸 발견
+      (architecture.md §3 참조) — 근본 원인 확인됨, 우리 코드 문제 아님.
+      **라이브 검증은 Base 등 지원 체인에서 소액으로 남은 작업** (결정 대기 참조).
+- [x] 대시보드 ↔ 백엔드 연결 (8/9) — `_actions/register-wallet.ts`(Server Action)로
+      `analyzeWallet` → `provisionMonitoring` 연결. `guard-panel.tsx` "감시 시작" 버튼이
+      이제 실제로 워크플로우를 생성함(로컬 state만 바꾸던 스텁에서 교체). pending/error 상태 추가.
+      판단 로그 자동 기록(Supabase)은 아직 — `log-table.tsx`는 계속 목업 데이터.
 - [~] Phase 0 데모: 지갑 분석 → 워크플로우 자동 생성 시연 (8/9) — `npm run demo:phase0 -- <주소>`로
       스크립트화, 실행 지갑으로 실제 검증 완료(`analyzeWallet` → `provisionMonitoring` 한 번에).
       `idempotency_key`가 `provision-<주소>`라 같은 지갑 재실행해도 워크플로우 안 쌓임 — 리허설에 안전.
+      대시보드 버튼으로도 이제 같은 흐름 가능(위 항목).
       **남은 건 촬영뿐.**
 - [~] Phase 2 반자동 데모: 사건 투입 → Claude 진단 → 대응 (8/9) — 마지막 실행 단계용
       `npm run demo:execute -- <ACTION_TYPE> '<params json>'` 스크립트 준비됨. 아직 실전 검증은
@@ -145,6 +152,8 @@
 - [ ] ★ Safe + Zodiac Roles 채택 여부 (온체인 액션 화이트리스트 ↔ 가스 스폰서십 배타. 첫 tx는 끝났으니
       지금이 판단 시점)
 - [ ] 스폰서십 vs private routing 택일 (동시 사용 불가)
+- [ ] `execute()` 라이브 검증을 Base(등 지원 체인)에서 소액 real fund로 할지, 스킵하고
+      Phase 0 + 진단 단계까지만 데모할지 (architecture.md §3, Aave v3 Sepolia 미지원 발견 참조)
 
 ---
 
