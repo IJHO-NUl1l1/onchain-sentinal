@@ -41,20 +41,35 @@ async function connect(): Promise<Client> {
   return client;
 }
 
-// CallToolResult 응답 형태(content/isError/structuredContent)는 MCP SDK 타입에서 확인한
-// 것이고, KeeperHub가 transactionLink를 어느 필드에 담아 돌려주는지는 미확인이라
-// structuredContent에서 최대한 방어적으로만 꺼낸다 — 없으면 raw를 그대로 남겨서
-// 나중에 실제 응답 보고 고칠 수 있게 한다.
+// ⚠️ 8/9 실증: KeeperHub는 MCP의 isError를 안 쓰고, content[0].text 안에 JSON 문자열로
+// {success, error, ...}를 담아 돌려준다 (예: referralCode 누락 에러가 이 경로로 왔음 —
+// isError는 undefined였는데 본문은 success:false였다). isError만 보면 실패를 놓친다.
+function parseBody(result: CallToolReturn): Record<string, unknown> | undefined {
+  if ("structuredContent" in result && result.structuredContent) {
+    return result.structuredContent as Record<string, unknown>;
+  }
+  if ("content" in result && Array.isArray(result.content)) {
+    const first = result.content[0];
+    if (first && first.type === "text") {
+      try {
+        return JSON.parse(first.text) as Record<string, unknown>;
+      } catch {
+        return undefined;
+      }
+    }
+  }
+  return undefined;
+}
+
 function toTxResult(result: CallToolReturn): TxResult {
-  const structured = "structuredContent" in result ? result.structuredContent : undefined;
-  const transactionLink =
-    structured && typeof structured === "object" && "transactionLink" in structured
-      ? String((structured as Record<string, unknown>).transactionLink)
-      : undefined;
+  const body = parseBody(result);
+  const success = result.isError !== true && (body?.success === undefined || body.success === true);
+  const transactionLink = typeof body?.transactionLink === "string" ? body.transactionLink : undefined;
+
   return {
-    success: result.isError !== true,
+    success,
     transactionLink,
-    raw: structured ?? ("content" in result ? result.content : result),
+    raw: body ?? ("content" in result ? result.content : result),
   };
 }
 
@@ -131,13 +146,18 @@ export class KeeperHubExecutor implements Executor {
       );
     }
 
+    // ⚠️ 8/9 실증 함정: search_protocol_actions 스키마엔 optionalFields로 나오지만
+    // aave-v3/supply는 referralCode 없이 호출하면 "referralCode: uint16 is missing"으로
+    // 거부된다. 0(추천인 없음)을 기본값으로 채운다 — 호출자가 넘기면 그 값이 우선.
+    const defaults = actionType === "aave-v3/supply" ? { referralCode: "0" } : {};
+
     const client = await connect();
     try {
       const result = await client.callTool({
         name: "execute_protocol_action",
         arguments: {
           actionType,
-          params: { network: DEV_CHAIN_ID, ...action.params },
+          params: { network: DEV_CHAIN_ID, ...defaults, ...action.params },
         },
       });
       return toTxResult(result);
