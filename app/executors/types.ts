@@ -2,10 +2,18 @@
 // 에이전트/백엔드 몸통은 이 인터페이스만 알아야 한다 — KeeperHub/Flare 분기는
 // keeperhub.ts / flare.ts 구현체 안에서만 일어난다 (CLAUDE.md "Executor 경계").
 
-// 액션 enum은 아직 미확정 (docs/todo.md "결정 대기" 참조).
-// search_protocol_actions 결과 + AssetVault 패턴에서 최종 목록이 나오기 전까지는
-// 구체적인 유니온 타입으로 좁히지 않는다 — 지어내지 않기 위함.
-export type ActionType = string;
+// 액션 enum 확정 (8/9). 근거: KeeperHub search_protocol_actions(aave-v3) 실사 +
+// architecture.md AssetVault 패턴(deposit/borrow/repay/withdraw+LTV). 매핑표는
+// architecture.md §10 참조. `borrow`/`set-collateral`은 방어용 에이전트가 쓸 이유가
+// 없어 제외 — 필요해지면 나중에 추가.
+export type ActionType =
+  | "NO_ACTION"
+  | "INCREASE_MONITORING"
+  | "SUPPLY_COLLATERAL"
+  | "WITHDRAW_COLLATERAL"
+  | "REPAY_DEBT"
+  | "LOCK_POSITION"
+  | "ACCELERATE_ORACLE";
 
 export interface Action {
   type: ActionType;

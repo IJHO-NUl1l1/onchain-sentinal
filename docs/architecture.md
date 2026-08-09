@@ -342,7 +342,19 @@ claude mcp add --transport http --scope user keeperhub https://app.keeperhub.com
 
 ## 10. 우리가 정할 것 (외부 자료 아님, 코드 중 확정)
 
-- [ ] 액션 enum 최종 (search_protocol_actions 결과 + AssetVault 패턴에서)
+- [x] **액션 enum 확정 (8/9)** — KeeperHub `search_protocol_actions(protocol: "aave-v3")` 실사(7개 액션) +
+  AssetVault 패턴(deposit/borrow/repay/withdraw+LTV) 대조. `borrow`/`set-collateral`은 방어용 에이전트가
+  쓸 이유가 없어 제외. 코드: `app/executors/types.ts`의 `ActionType`.
+
+  | 추상 액션 | KeeperHubExecutor | FlareExecutor |
+  |---|---|---|
+  | `NO_ACTION` | 없음(로그만) | 없음(로그만) |
+  | `INCREASE_MONITORING` | 워크플로우 스케줄 단축 등 | 없음(로드맵) |
+  | `SUPPLY_COLLATERAL` | `aave-v3/supply` | `AssetVault.deposit()` |
+  | `WITHDRAW_COLLATERAL` | `aave-v3/withdraw` | `AssetVault.withdraw()` |
+  | `REPAY_DEBT` | `aave-v3/repay` | `AssetVault.repay()` |
+  | `LOCK_POSITION` | (전액 인출로 흉내) | `isLocked` 설정 (PriceTriggeredSafe) |
+  | `ACCELERATE_ORACLE` | 해당 없음 | `offerIncentive()` (Volatility Incentive, Flare 전용) |
 - [ ] MVP 감시 범위 (KH=Aave v3 유력 / Flare=담보볼트)
 - [ ] 데모 시나리오 자산·상황 (급락 연출 방법)
 - [ ] 두 마감 타임존 최종 확인 (제출 페이지 로컬 표시)

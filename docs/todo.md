@@ -68,12 +68,11 @@
       색 최소화(무채색 + 심각도 라벨만 절제된 색), 네온/그라디언트 없음.
 - [x] Executor 인터페이스 정의 (`provisionMonitoring`, `execute`) (8/8) — `app/executors/types.ts`.
       `keeperhub.ts`/`flare.ts`는 인터페이스 구현 스켈레톤만(메서드는 throw) — 실제 호출부는 각각 Phase C/D.
-      액션 enum 미확정이라 `ActionType`은 임시로 `string`.
+- [x] **액션 enum 확정 (8/9)** — 상세는 architecture.md §10. `app/executors/types.ts`의 `ActionType`에 반영.
 - [~] Agent 로직 - analyzer (지갑 조회 → 리스크 프로파일) (8/8) — 파일·시그니처만, 본문은 미구현
 - [~] Agent 로직 - diagnoser (사건 → 진단) (8/8) — 파일·시그니처만, 본문은 미구현
 - [~] Agent 로직 - strategist (진단 → 액션 enum 선택) (8/8) — 파일·시그니처만, 본문은 미구현
-- [ ] 프롬프트 템플릿 초안 — 액션 enum 확정 후 작성 (지금 쓰면 enum 바뀔 때마다 재작성해야 함)
-- [ ] 액션 enum 확정 (`search_protocol_actions` 결과 + AssetVault 패턴 참고)
+- [ ] 프롬프트 템플릿 초안 — 이제 액션 enum 확정됐으니 착수 가능
 
 ## Phase C — KeeperHub 버전 (8/9-8/12) 🔵
 
@@ -118,7 +117,7 @@
 ---
 
 ## 결정 대기 (우리가 정할 것)
-- [ ] 액션 enum 최종 목록
+- [x] 액션 enum 최종 목록 (8/9, architecture.md §10 / app/executors/types.ts)
 - [ ] MVP 감시 범위 (KH=Aave v3 유력 / Flare=담보볼트)
 - [ ] 데모 시나리오 자산·급락 연출 방법
 - [ ] 두 마감 타임존 최종 확인

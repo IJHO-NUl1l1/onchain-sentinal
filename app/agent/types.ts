@@ -1,7 +1,6 @@
 // 🟢 두뇌 로직 공용 타입. architecture.md §2 [Agent] "구조화 출력
 // { severity, diagnosis, action(enum), rationale }" 을 diagnose+strategize
-// 두 단계로 나눠 표현한다. action(enum) 자체는 아직 미확정
-// (docs/todo.md "결정 대기" 참조) — executors/types.ts의 ActionType 재사용.
+// 두 단계로 나눠 표현한다. action(enum)은 executors/types.ts의 ActionType 재사용.
 
 import type { Action } from "../executors/types";
 
