@@ -122,14 +122,26 @@
       ※ tx 해시로 검증하라는 안내 문구 필수
 - [ ] **KeeperHub 제출 (8/13 19:00)** (레포 + 영상 + **tx 해시** 링크)
 
-## Phase D — Flare 버전 (8/11 병렬 착수 → 8/15 04:59) 🟠
+## Phase D — Flare 버전 (8/9 예정보다 일찍 병렬 착수 → 8/15 04:59) 🟠
 
-- [ ] flare-foundry-starter 또는 flare-hardhat-starter clone (EVM cancun 설정)
-- [ ] SentinelVault.sol 뼈대 (PriceTriggeredSafe + AssetVault 예제 기반)
-- [ ] FtsoV2 피드 조회 통합 (`getFeedById`)
-- [ ] 즉시방어 / 에스컬레이션 분기 로직 (최소 성립선)
-- [ ] Volatility Incentive (`offerIncentive`) 통합 ★차별화
-- [ ] Coston2 배포 + 컨트랙트 주소 확보
+> KeeperHub Base 검증과 독립적인 작업이라 8/11까지 안 기다리고 8/9에 바로 시작함.
+
+- [x] flare-hardhat-starter 기반 세팅 (8/9) — 원본 스타터는 LayerZero/FAssets 등 불필요한 예제가
+      많아 의존성 충돌 나서, hardhat/토큘박스만 최소로 새로 구성(Hardhat 3 + `hardhat-toolbox-mocha-ethers`).
+      `PriceTriggeredSafe`/`AssetVault`라는 이름의 예제는 지금 스타터에 없음(architecture.md 실물 없는
+      레퍼런스였던 것으로 확인) — 대신 실제 있는 `FTSOv2RateProvider.sol`로 FTSO 호출 패턴 검증.
+      EVM cancun 확인됨(컴파일 로그: "evm target: cancun").
+- [x] SentinelVault.sol MVP 작성 (8/9) — 정책 저장(`setPolicy`) + 퍼미션리스 `checkAndExecute`
+      (즉시방어/에스컬레이션 분기) + 화이트리스트 `agentRespond`. ActionType enum을
+      `app/executors/types.ts`와 이름·순서 동일하게 맞춤. **컴파일 성공.**
+- [x] FtsoV2 피드 조회 통합 (`getFeedById`) (8/9) — `ContractRegistry.getTestFtsoV2()` 실제 컴파일 확인
+- [x] 즉시방어 / 에스컬레이션 분기 로직 (최소 성립선) (8/9) — 코드 작성 완료, **아직 Coston2에 배포 후
+      실동작 검증은 안 함**
+- [ ] Volatility Incentive (`offerIncentive`) 통합 ★차별화 — 의도적으로 미룸.
+      `IFastUpdateIncentiveManager.offerIncentive()`가 커스텀 fixed-point 타입(Range/SampleSize)을
+      요구해서, 지어내지 않고 제대로 조사한 뒤 붙일 것
+- [ ] Coston2 배포 + 컨트랙트 주소 확보 — `DEPLOYER_PRIVATE_KEY` 필요(`contracts/.env`,
+      루트 `.env`나 `app/.env`와 별개 파일)
 - [ ] FlareExecutor 어댑터 (`setPolicy`, `agentRespond`)
 - [ ] 키퍼 스크립트 (퍼미션리스 `checkAndExecute` 주기 호출)
 - [ ] (스코프밸브) FDC 유출검증 - 시간 되면 실구현, 안 되면 인터페이스+로드맵

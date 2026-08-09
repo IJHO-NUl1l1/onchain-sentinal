@@ -135,7 +135,11 @@ interface Executor {
 
 ### [Contract] SentinelVault.sol — 🟠 전용 (유일한 완전 분리 산출물)
 - Coston2 배포. 제출물 "smart contract address"에 기입
-- **레퍼런스 뼈대**: flare-foundry/hardhat-starter의 `PriceTriggeredSafe`(변동성 잠금) + `AssetVault`(담보 대출) 예제 결합
+- ⚠️ **8/9 정정**: `PriceTriggeredSafe`/`AssetVault`라는 이름의 예제는 현재 `flare-hardhat-starter`에
+  실재하지 않음(직접 clone해서 확인, 8/9) — 옛 버전 스타터 기준이었거나 잘못 기억된 참조로 보임.
+  실제로 쓴 레퍼런스는 스타터의 `boringVault/oracles/FTSOv2RateProvider.sol`(FTSO 호출 패턴)이고,
+  나머지 정책 저장/즉시방어/에스컬레이션 로직은 architecture.md §4 라이프사이클을 직접 코드로 옮김.
+  실제 구현은 `contracts/contracts/SentinelVault.sol` 참조.
 ```
 SentinelVault.sol (Coston2, EVM=cancun)
 ├─ 정책 저장: 자산별 { feedId, 앵커비교, 임계값(BIPS), 액션enum }
@@ -287,9 +291,8 @@ Aave v4는 대안이 아니다 — Ethereum 메인넷만 지원(L2 없음), 그�
 
 **키퍼:** 컨트랙트는 스스로 안 깨어남. `checkAndExecute()`를 퍼미션리스로 열고 단순 cron 봇이 주기 호출 (Flare 표준 패턴 = adapter의 `refresh()`/`checkMarketVolatility()`).
 
-**레퍼런스 구현(공식 예제, 뼈대 재사용):**
-- `PriceTriggeredSafe` — 변동성 감지 시 자동 잠금 (우리 Phase 1의 베이스라인)
-- `AssetVault` — deposit/borrow/repay/withdraw + LTV (담보 방어 뼈대)
+**레퍼런스 구현**: `PriceTriggeredSafe`/`AssetVault`는 현재 스타터에 없는 걸로 확인됨(§2 8/9 정정 참조).
+대신 `boringVault/oracles/FTSOv2RateProvider.sol`의 FTSO 호출 패턴을 참고해 `SentinelVault.sol` 직접 작성.
 
 ---
 
@@ -383,7 +386,8 @@ Aave v4는 대안이 아니다 — Ethereum 메인넷만 지원(L2 없음), 그�
 
 ## 9. 스코프 밸브 (Flare, 밀릴 때 버리는 순서)
 
-1. **최소 성립선(사수)**: FtsoV2 피드 조회 + 즉시방어/에스컬레이션 분기 + Coston2 배포 (PriceTriggeredSafe 기반이면 빠름)
+1. **최소 성립선(사수)**: FtsoV2 피드 조회 + 즉시방어/에스컬레이션 분기 + Coston2 배포 — 코드는 작성 완료
+   (`contracts/contracts/SentinelVault.sol`, 8/9), 배포만 남음
 2. Volatility Incentive `offerIncentive` (구현 작고 차별화 큼, 우선순위 높음)
 3. FDC 유출방어 (되면 verifyWeb2Json 실구현, 안 되면 인터페이스+로드맵)
 4. Phase 2 자동 에스컬레이션(API/listener) — 로드맵 기본
