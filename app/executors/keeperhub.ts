@@ -17,7 +17,21 @@ import type { Action, ActionType, Executor, MonitoringProfile, TxResult } from "
 type CallToolReturn = Awaited<ReturnType<Client["callTool"]>>;
 
 const MCP_URL = "https://app.keeperhub.com/mcp";
-const DEV_CHAIN_ID = process.env.KEEPERHUB_DEV_CHAIN_ID ?? "11155111";
+const DEV_CHAIN_ID = process.env.KEEPERHUB_DEV_CHAIN_ID ?? "8453";
+
+// 실행 지갑(Turnkey EOA) 주소. Aave 액션의 onBehalfOf/to에 쓴다.
+// KeeperHub가 서명할 수 있는 지갑이 이것뿐이라 포지션의 주인도 항상 이 주소다
+// (감시는 임의 주소로 되지만 방어는 이 지갑에 한정 — architecture.md §8-2).
+// ⚠️ 수신 주소는 엄격한 EIP-55 체크섬 검증을 받는다. 체크섬 형태 그대로 넣을 것.
+function executorAddress(): string {
+  const addr = process.env.KEEPERHUB_EXECUTOR_ADDRESS;
+  if (!addr) {
+    throw new Error(
+      "KeeperHubExecutor: KEEPERHUB_EXECUTOR_ADDRESS is not set (the Turnkey wallet address)",
+    );
+  }
+  return addr;
+}
 
 // architecture.md §10 매핑표. ACCELERATE_ORACLE은 Flare 전용이라 여기 없다 —
 // 호출되면 execute()가 명시적으로 거부한다.
@@ -63,7 +77,10 @@ function parseBody(result: CallToolReturn): Record<string, unknown> | undefined 
 
 function toTxResult(result: CallToolReturn): TxResult {
   const body = parseBody(result);
-  const success = result.isError !== true && (body?.success === undefined || body.success === true);
+  // 본문을 못 읽으면 성공을 확인할 수 없으므로 실패로 본다. 방어 시스템에서
+  // "실패를 성공으로 보고하는 것"이 가장 나쁜 실패 모드다 (8/10).
+  const success =
+    result.isError !== true && body !== undefined && (body.success === undefined || body.success === true);
   const transactionLink = typeof body?.transactionLink === "string" ? body.transactionLink : undefined;
 
   return {
@@ -146,10 +163,26 @@ export class KeeperHubExecutor implements Executor {
       );
     }
 
+    // 액션별 필수/권장 기본값. 호출자가 넘긴 값이 항상 우선한다.
+    //
     // ⚠️ 8/9 실증 함정: search_protocol_actions 스키마엔 optionalFields로 나오지만
     // aave-v3/supply는 referralCode 없이 호출하면 "referralCode: uint16 is missing"으로
-    // 거부된다. 0(추천인 없음)을 기본값으로 채운다 — 호출자가 넘기면 그 값이 우선.
-    const defaults = actionType === "aave-v3/supply" ? { referralCode: "0" } : {};
+    // 거부된다. 0(추천인 없음)을 기본값으로 채운다.
+    //
+    // ⚠️ 8/10 Aave 공식 Pool 문서 대조: supply/repay는 onBehalfOf가, withdraw는 to가
+    // required다. 둘 다 실행 지갑이어야 한다 — KeeperHub가 서명 가능한 지갑이 그것뿐이라
+    // 포지션도 그 주소에 귀속된다. interestRateMode는 "should always be passed 2"(variable,
+    // stable은 폐기)인데 KeeperHub 스키마에선 optional이라 기본값을 신뢰하지 않고 명시한다.
+    const defaults: Record<string, unknown> = {};
+    if (actionType === "aave-v3/supply") {
+      defaults.referralCode = "0";
+      defaults.onBehalfOf = executorAddress();
+    } else if (actionType === "aave-v3/repay") {
+      defaults.interestRateMode = "2";
+      defaults.onBehalfOf = executorAddress();
+    } else if (actionType === "aave-v3/withdraw") {
+      defaults.to = executorAddress();
+    }
 
     const client = await connect();
     try {
