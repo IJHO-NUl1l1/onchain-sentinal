@@ -543,54 +543,72 @@ executes through KeeperHub beats a polished demo that never touches a chain."*
 **재촬영 대비:** `provisionMonitoring`은 `idempotency_key = provision-<주소>`라 여러 번 돌려도
 워크플로우가 안 쌓인다. 3막을 다시 찍으려면 `aave-v3/withdraw`로 담보를 빼 HF를 다시 떨어뜨리면 된다.
 
-**❓ 미검증 가정 목록 (8/10) — 시나리오 최종 확정 전에 공식 자료로 메울 것.**
-아래는 **공식 문서로 확인한 게 아니라 추론·일반지식으로 채운 부분**이다. 촬영 전에 근거를 확보한다.
+**❓ 미검증 목록 (8/10 갱신) — 공식 문서 근거 없이 추론·경험으로 채운 것 전부.**
+데이터뿐 아니라 **코드가 추측 위에 서 있는 부분**까지 포함한다. 시나리오는 WETH담보/USDC차입·Base 확정,
+Sepolia 폴백은 폐기됨.
 
-*A. Aave Base 시장 파라미터 — 위험도 최상 (숫자가 전부 여기서 나온다)*
-- [ ] Base USDC의 **LTV / 청산 임계값**. 위 "supply 10 → borrow 5~6 → HF 1.3~1.4"와 4막의 "2.1로 회복"은
-      내가 청산임계값을 대략 78%로 **가정**하고 계산한 값이다. 실제 값에 따라 대본 숫자가 전부 바뀐다
-- [ ] **USDC를 담보로 넣고 USDC를 빌리는 게 허용되는가** (isolation mode / siloed borrowing 여부).
-      막혀 있으면 사전 준비 자체가 성립하지 않는다 ← 가장 먼저 확인
-- [ ] Base USDC의 borrowing enabled 여부 / supply·borrow cap
-- [ ] **Base USDC 컨트랙트 주소**와 decimals(6으로 가정 중). 10 USDC = `"10000000"`인지 확정 필요
-→ 자료: Aave Base 마켓의 리저브 설정(app.aave.com 또는 aave-address-book / `Pool.getConfiguration`)
+*A. Aave 시장 파라미터 — ✅ 8/10 해소됨*
+온체인 `getReservesList`/`getConfiguration` 직접 조회로 확정(위 표). 주소·decimals·청산임계값·
+isolation/siloed 여부 전부 확인. **더 이상 추측 아님.**
 
-*B. `execute_protocol_action` 응답 형태 — 3막의 결과물*
-- [ ] **tx 링크를 돌려주는가.** `toTxResult`가 `body.transactionLink`를 읽는데 protocol action 응답에
-      그 필드가 오는지 미확인. 안 오면 3막에서 보여줄 링크를 다른 데서 구해야 한다
-- [ ] 실행 상태를 어디서 조회하는가 (`get_direct_execution_status` 대상이 아님이 확인됨)
-→ 자료: KeeperHub Direct Execution / API 문서의 protocol action 응답 예시
+*B. 코드가 공식 스키마 없이 추론으로 채워진 부분 — 문서화된 근거가 없다*
+- [ ] `create_workflow`의 node/edge 구조 전체. `keeperhub.ts` 주석대로 **기존 워크플로우를
+      `list_workflows`로 조회해 형태를 베낀 것**이지 공식 스키마 문서를 본 게 아니다
+      (`position`, `data.status`, edge 형태 모두 역공학 결과)
+- [ ] `_protocolMeta` 의 내용물. 베껴 넣었을 뿐 **무슨 역할인지, 필수인지 모른다**
+- [ ] `create_workflow`가 `idempotency_key`를 실제로 존중하는지. 중복이 안 쌓이는 건 봤지만
+      **이름이 같아서일 수도** 있다 (스키마에 있는지 미확인)
+- [ ] `onBehalfOf`/`to`/`interestRateMode`를 KeeperHub의 `aave-v3/*` 액션이 그 형태로 받는지.
+      Aave 문서로 "무엇이 필요한지"는 확정했지만 **KeeperHub가 그 키를 그대로 받는지는 미검증**
+- [ ] `toTxResult`가 읽는 `body.transactionLink` — **protocol action 응답에 이 필드가 있는지 모른다**
+- [ ] `body.success` 기반 성공 판정 — 8/9에 관측한 에러 응답 하나에서 역추론한 규칙
+- [ ] `LOCK_POSITION → aave-v3/withdraw` "전액 인출로 흉내"는 **우리가 지어낸 의미 부여**.
+      `amount`(= uint256 max) 기본값도 없어 **지금 상태로는 호출 자체가 안 된다**
+- [ ] `analyzer.ts`의 base currency 8자리 / HF 18자리 소수 가정. Aave Pool 문서에 자릿수 명시가 없다.
+      **실제 포지션이 생기면 그때 실측으로 확정할 것**
 
-*C. Audit trail — 5막 전체가 여기 걸려 있다*
-- [ ] **MCP로 직접 실행한 protocol action이 audit trail에 남는가**, 아니면 워크플로우 실행만 남는가
-- [ ] 공고가 말한 항목(trigger/simulation result/submitted tx/gas used/outcome/timestamp)이
-      우리 실행에도 그대로 뜨는가. 우리는 시뮬레이션을 안 하므로 "simulation result"는 빈다
-→ 자료: KeeperHub Audit trail / Keeper Runs 문서
-
-*D. 4막 서사 — 스폰서 형태가 실제로 나오는가*
-- [ ] Base 메인넷에서 **가스 크레딧이 남아 있어야** 스폰서십이 적용된다. 소진 상태면 "From=우리 지갑"인
-      일반 형태로 나온다. 두 경우 다 정상이지만 **대사가 달라진다** → 촬영 전 billing 페이지 확인
-→ 자료: KeeperHub 대시보드 billing(가스 크레딧 잔여)
-
-*E. 자금 경로 — 내 일반지식이지 확인된 사실이 아니다*
-- [ ] 업비트가 USDC를 **Base 네트워크로** 출금 지원하는가 (안 되면 브리지 비용이 USDC 값보다 크다)
-- [ ] "거래소가 delegation 코드 있는 주소로의 출금을 거부할 수 있다"는 것도 **추측**이다.
-      어차피 개인 지갑 경유가 안전하니 실무엔 영향 없지만 근거로 쓰지는 말 것
-→ 자료: 업비트 출금 안내
-
-*F. 사소하지만 기록해 둘 추론*
-- base currency 8자리·HF 18자리 소수: Pool 문서에 자릿수 명시가 없다. 우리 코드가 그렇게 가정하고
-  말이 되는 값이 나왔으니 **경험적으로만** 검증됨
-- USDC max approve 한 번이 supply·repay 둘 다 커버: ERC20 allowance 의미상 맞다(위험 낮음)
-- `create_workflow`의 `idempotency_key` 24h 윈도우: `execute_check_and_execute` 스키마엔 명시돼 있으나
-  `create_workflow`는 미확인. 중복이 안 쌓이는 건 경험적으로만 확인됨
+*C. KeeperHub 동작 가정 — 데모 막별로 직결*
+- [ ] `execute_protocol_action` 응답에 tx 링크가 오는가 → **3막의 결과물**
+- [ ] MCP로 직접 실행한 protocol action이 **audit trail에 남는가** → **5막 전체**
+- [ ] Base 메인넷 가스 크레딧 잔여 → 스폰서 형태냐 자기지갑 형태냐 → **4막 대사**
 - [ ] `web3/approve-token`이 Base에서 동작하는지·파라미터 형태 (`list_action_schemas`로 확인 가능)
 
+*D. Aave 동작 가정 — A 이후 남은 것*
+- [ ] **WETH를 supply하면 자동으로 담보로 잡히는가.** 안 잡히면 HF가 무한대로 남아 **데모가 성립하지 않는다.**
+      `setUserUseReserveAsCollateral`로 켜야 할 수도 있다 ← D에서 가장 위험
+- [ ] 부분 `repay`가 우리가 연 부채(variable, mode 2)에 그대로 먹히는가
+
+*E. 셋업 실행 자체가 미검증 — ⚠️ 놓치기 쉬운 구조적 문제*
+포지션은 **실행 지갑 이름으로** 만들어야 하는데 그 지갑은 KeeperHub만 서명할 수 있다.
+즉 Aave UI로 못 하고 **approve·supply·borrow 세 건 모두 KeeperHub를 통해야 한다.**
+- [ ] `aave-v3/borrow`는 우리 액션 enum에 **의도적으로 없다**(방어 에이전트가 빌릴 이유가 없어서).
+      셋업용 차입은 **MCP를 손으로 호출**해서 해야 한다 — 경로·인자 미검증
+- [ ] **WETH를 실행 지갑에 어떻게 넣는가.** Aave는 ETH가 아니라 WETH 토큰을 받는다.
+      거래소에서 WETH로 직접 출금이 되는지, 아니면 ETH를 받아 wrap해야 하는지(=`WETH.deposit()` 호출),
+      wrap을 KeeperHub로 어떻게 하는지 전부 미확인 ← **자금 경로의 실질적 첫 관문**
+- [ ] 업비트의 Base 네트워크 출금 지원 여부·수수료
+- [ ] "거래소가 delegation 코드 있는 주소로의 출금을 거부한다"는 것도 **내 추측**이다(개인 지갑 경유로 회피)
+
+*F. 에이전트 판단 — 한 번도 위험 상황을 본 적이 없다*
+- [ ] HF 2.0 / 정책 2.5에서 diagnoser가 실제로 medium·high를 내는가
+- [ ] strategist가 `NO_ACTION`이 아니라 `REPAY_DEBT`(또는 `SUPPLY_COLLATERAL`)를 고르는가
+      → 프롬프트는 우리 것이라 조정 가능하지만 **아직 한 번도 안 돌려봤다**
+
 *G. 제출 절차*
-- [ ] 바운티를 **어떻게** 내는가 (별도 폼인지 BUIDL 첨부인지)
 - [ ] 제출 폼이 브랜치 URL을 받는가 (§8-1 단일 레포 결정의 전제)
+- [ ] 바운티 제출 방식(별도 폼인지 BUIDL 첨부인지)
+- [ ] 같은 레포를 두 해커톤에 내는 게 규정상 허용되는가
+
+*H. 문서 정합성 (우리가 고칠 것)*
+- [ ] 이 §8-2 본문이 아직 **USDC담보/USDC차입 + 옛 숫자** 기준이다 → WETH/USDC로 재작성 필요
+- [ ] §3의 "Sepolia 권장"(8/6, 스폰서십+Safe 기준)이 Base 확정과 어긋나 보인다 → 단서 필요
+
+*I. 폴백이 없어졌다 (8/10, Sepolia 제외 결정)*
+자금이 안 오면 Aave 실행 장면 자체가 불가능하고, 남는 실행 증거는 8/8의 단순 전송 tx 하나뿐이다.
+- [ ] **자금 도착 데드라인과 그때의 대체안을 미리 정할 것** (촬영 당일에 정하면 늦다)
 
 ---
+
 
 **💰 바운티(별도 $1,000, Grand Prize와 중복 수상 가능) — 놓치지 말 것:**
 "Best Onboarding UX Improvement … **a clear teardown of where you got stuck with proposed fixes**".
