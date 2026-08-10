@@ -483,10 +483,30 @@ executes through KeeperHub beats a polished demo that never touches a chain."*
    못박았고 stable 모드는 폐기됐다. KeeperHub에선 optional 필드라 기본값을 신뢰하지 말 것.
    `referralCode`는 `0`(referral 프로그램 비활성) — 우리 §3 함정 13번과 일치.
 
-**확정 주소:**
-- Base Aave v3 Pool `0xA238Dd80C259a72e81d7e4664a9801593F98d1c5` (코드에서 실사용 검증됨, `analyzer.ts`)
-- Base USDC — **아직 문서에 없다. 지어내지 말고** `Pool.getReservesList()` 또는 aave-address-book으로
-  확인해서 여기 적을 것 (8/9에 기기2가 같은 방식으로 대조했다)
+**✅ 확정 — Base Aave v3 리저브 (8/10, 온체인 직접 조회. `app/scripts/check-base-reserve.ts`)**
+`Pool.getReservesList()`로 리저브 목록을 받고 `Pool.getConfiguration()` 비트맵을 디코딩한 값이다.
+문서 인용이 아니라 체인이 답한 값 — 가정 A의 대부분이 여기서 해소됐다.
+
+| | WETH (담보) | USDC (부채) |
+|---|---|---|
+| 주소 | `0x4200000000000000000000000000000000000006` | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
+| decimals | **18** | **6** |
+| LTV | 80% | 75% |
+| **청산 임계값** | **83%** | 78% |
+| 청산 보너스 | 105% | 105% |
+| borrowing enabled | true | **true** |
+| siloed / isolation | false / false | false / false |
+| active·frozen·paused | true / false / false | true / false / false |
+| borrow cap / supply cap | 143,000 / 169,000 | 207,000,000 / 230,000,000 |
+
+- Base Aave v3 Pool `0xA238Dd80C259a72e81d7e4664a9801593F98d1c5` (`analyzer.ts`에서 실사용)
+- **둘 다 isolation/siloed가 아니다** → WETH 담보 + USDC 차입 조합에 제약 없음
+- ⚠️ 금액은 base unit으로 넘긴다: USDC 10개 = `"10000000"`, WETH 0.01개 = `"10000000000000000"`
+
+**HF 계산식:** `HF = (담보USD × 청산임계값) / 부채USD`. WETH 담보면 임계값 0.83이다.
+- 담보가치 C에 대해 부채 D를 잡으면 `HF = 0.83·C / D`
+- LTV 80% 상한이라 최대 차입은 `D ≤ 0.8·C` → 이때 HF ≈ 1.04 (즉 최대로 빌리면 청산 문턱)
+- 목표 HF에서 역산: `D = 0.83·C / 목표HF`
 
 **그 외 문서에서 확인된 것 (우리 구현과 일치):**
 - `getUserAccountData` 반환 6개(담보/부채/여력/청산임계값/LTV/HF)가 `analyzer.ts` 디코딩과 정확히 일치.
