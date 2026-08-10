@@ -255,7 +255,16 @@ Aave v4는 대안이 아니다 — Ethereum 메인넷만 지원(L2 없음), 그�
 12. `web3/approve-token`은 **`execute_protocol_action`(직접 실행)을 지원 안 함** — "Direct execution not supported... Use workflow execution instead" 에러. 워크플로우로 만들어서 `execute_workflow`로 실행해야 함
 13. `aave-v3/supply`는 `referralCode`가 스키마상 optional인데 **실제로는 없으면 거부됨**("referralCode: uint16 is missing"). `"0"` 기본값 필요
 
-**직접 실행 안전 절차 (문서 명시, 반드시 이 순서):**
+**⚠️ 8/10 정정 — 안전 절차가 적용되는 툴은 한정적이다:**
+아래 simulate/idempotency_key 절차는 **"직접 실행" 툴 3종 전용**이다 —
+`execute_transfer` / `execute_contract_call` / `execute_check_and_execute`.
+(`get_direct_execution_status` 설명이 이 셋만 명시한다.)
+- **`execute_protocol_action`에는 `simulate`도 `idempotency_key`도 없다.** 스키마가 `actionType` + `params`뿐이고
+  실행 상태 폴링 대상도 아니다. 우리 `KeeperHubExecutor.execute()`가 이 툴을 쓰므로 **시뮬레이션 없이 바로 나간다.**
+- 시뮬레이션·멱등성·감사 폴링이 필요하면 `execute_check_and_execute`로 가야 한다(원시 ABI/`function_args` 필요).
+  그쪽은 "읽고-판단-실행 한방"이라 우리 제품과 궁합이 좋지만, `abi`·`function_args` 문자열화 함정을 다시 만난다.
+
+**직접 실행 안전 절차 (위 3종 툴 한정, 반드시 이 순서):**
 1. `simulate: true`로 먼저 실행
 2. `success === true` **그리고** `wouldRevert === false`일 때만 진행 (툴 에러면 즉시 중단)
 3. 동일 인자 + `idempotency_key`로 재호출
@@ -492,7 +501,7 @@ executes through KeeperHub beats a polished demo that never touches a chain."*
 |---|---|---|
 | 1. 배치 | 대시보드에 주소 입력 → analyzer가 Base Aave 실데이터 조회 → `create_workflow`로 감시망 자동 생성. KeeperHub UI에 워크플로우가 실제로 생긴 걸 보여준다 | Use of KeeperHub surfaces (MCP, workflow builder) |
 | 2. 진단 | 실측 HF(예: 1.31)를 `prompts/diagnoser.md`→`strategist.md`에 태워 `{severity:high}` → `{action:"SUPPLY_COLLATERAL"}`. **출력이 액션 enum 밖으로 못 나간다**는 점을 명시 | Originality / 안전성 서사 |
-| 3. 실행 ★ | `simulate:true`로 먼저(`wouldRevert:false` 확인) → `idempotency_key` 붙여 실제 실행 → `get_direct_execution_status` 폴링 → **transactionHash**. Turnkey가 서명 — 사람 키도 메타마스크 팝업도 없다 | **Does it execute onchain (최고 가중치)** |
+| 3. 실행 ★ | `execute_protocol_action`으로 `aave-v3/supply` 실행 → 응답의 tx 링크. Turnkey가 서명 — 사람 키도 메타마스크 팝업도 없다 | **Does it execute onchain (최고 가중치)** |
 | 4. 검증 | BaseScan에서 tx 해시 열기. 스폰서 형태(From=릴레이어, Value=0)를 **설명하면서** Internal Transactions 탭으로 실제 호출을 보여준다. 이어서 HF 재조회 → 1.31 → 2.1로 **실제로 회복** | 실행 증명 |
 | 5. 관측 | KeeperHub audit trail: trigger / simulation result / submitted tx / gas used / outcome / timestamp | Reliability and observability |
 
