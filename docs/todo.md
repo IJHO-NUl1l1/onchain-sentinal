@@ -127,6 +127,11 @@
       못 함(Aave Sepolia 테스트 포지션 필요, 아래 execute 검증과 동일 선행조건).
       **남은 것**: ①데모 시나리오(사건) 확정 ②Aave 테스트 토큰 확보 후 실제 실행 ③촬영
 - [ ] (선택·1순위 폐기 대상) Marketplace 등록으로 "실제 호출 가능" 시연
+- [ ] 💰 **바운티 노림수** — 함정 목록 13개를 영문 teardown으로 정리 (§8-2).
+      공고의 "Best Onboarding UX Improvement"가 "where you got stuck with proposed fixes"를
+      명시적으로 인정한다. $1,000 별도 상금이고 Grand Prize와 중복 수상 가능. 추가 작업이 거의 없다.
+- [ ] 데모 사전 준비: Base USDC 20~30개 확보(업비트 → 개인 지갑 → 실행 지갑) →
+      supply 10 → borrow 5~6 → HF 1.3대 확인. **실탄용 USDC를 지갑에 남길 것** (§8-2)
 - [ ] 데모 영상 촬영 + 편집
       ※ ⚠️ 스폰서 tx는 지갑 주소 거래목록에 안 뜬다. "지갑 열어 잔고 확인" 연출 불가.
         **tx 해시 → Internal Transactions 탭** 구성으로 촬영할 것 (architecture.md 3장)
@@ -192,7 +197,8 @@
 - [x] MVP 감시 범위 확정 (8/9) — KH=Aave v3(코드로 확정: `analyzer.getAaveAccountData`,
       액션 enum), Flare=FTSO 가격 기반 담보 정책(`SentinelVault.setPolicy`). 둘 다 이미
       실제 코드/배포로 구현됐으니 더 논의할 필요 없이 확정된 것으로 처리.
-- [ ] 데모 시나리오 자산·급락 연출 방법
+- [x] **데모 시나리오 확정 (8/10)** — architecture.md §8-2. Base USDC 담보/부채로 HF를 1.3대로
+      만들어 두고 5막 구성(배치→진단→실행→검증→관측). 공고가 실행에 최고 가중치를 두므로 3막이 핵심.
 - [ ] **제출 폼이 브랜치 URL을 받는지 확인 (사용자)** — 안 받거나 "대회 전용 레포"를 규정으로
       요구하면 §8-1의 단일 레포 결정을 뒤집고 레포를 쪼개야 한다. 두 대회 병행 제출 허용 여부도 같이 확인.
 - [x] 두 마감 타임존 최종 확인 (8/9) — KeeperHub 8/13 19:00 KST 확정. Flare는 기존 8/15 04:59 유지
