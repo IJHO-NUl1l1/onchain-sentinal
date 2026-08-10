@@ -276,6 +276,8 @@ Aave v4는 대안이 아니다 — Ethereum 메인넷만 지원(L2 없음), 그�
 - 8/6 정정: **테스트넷도 가스 스폰서십 대상이고 크레딧을 안 먹는다.** "제출 tx는 반드시 mainnet"이 아니다.
   메인넷 tx는 심사 임팩트가 크지만 크레딧을 소모하므로, 개발·리허설은 테스트넷 / 제출용 1~2건만 메인넷을 권장.
 - **Sepolia 권장**: 스폰서십 + Safe 둘 다 지원되는 유일한 테스트넷 (Base Sepolia는 Safe 미지원).
+  ⚠️ **단, 전송·스폰서십 한정.** Aave v3 액션은 Sepolia 미지원이라(위 참조) **Aave 데모는 Base(8453)**.
+  8/10 결정: 데모는 Base 메인넷으로 확정, Sepolia 폴백은 폐기.
 
 ### 🟠 Flare 기술 스펙
 
@@ -462,13 +464,30 @@ executes through KeeperHub beats a polished demo that never touches a chain."*
 **우리 컨셉과의 정합:** 공고의 프레이밍이 *"Agents can think, KeeperHub lets them act"* — 우리 §0장
 "판단(LLM)과 실행(결정론적 인프라)의 분리"와 **같은 말이다.** README·영상은 이 언어를 그대로 쓴다.
 
-**사전 준비 (촬영 전, 화면 밖):** Base 메인넷, 실행 지갑 `0x2b33…BcE3`
-- USDC 20~30개 + 가스 폴백용 Base ETH 소액. 경로는 업비트 → 개인 지갑 → 실행 지갑
-  (거래소에서 실행 지갑으로 직접 X — delegation 코드 때문에 거부될 수 있음)
-- `aave-v3/supply` 10 USDC → `aave-v3/borrow` 5~6 USDC → **HF를 1.3~1.4로 떨어뜨려 둔다**
-- 나머지 ~10 USDC는 지갑에 남긴다 = **방어 액션의 실탄** (전부 담보로 넣으면 방어할 수단이 없다)
-- ⚠️ 담보·부채 **둘 다 USDC**로. 가격 변동이 없어야 HF가 고정되고 촬영 중 청산 사고가 없다
-- ⚠️ HF는 매 단계 `aave-v3/get-user-account-data`로 실측할 것. **1.0 밑은 청산**
+**포지션 설계 (8/10 확정): WETH 담보 + USDC 차입, Base 메인넷.**
+~~USDC 담보 + USDC 차입~~ 안은 폐기 — 같은 자산 담보/차입은 현실의 DeFi 포지션이 아니라
+"실사용성" 심사에서 불리하고, 허용 여부도 불확실했다. WETH담보/USDC차입은 가장 전형적인 형태이고
+온체인 조회로 **둘 다 isolation·siloed 아님**이 확인돼 제약이 없다.
+
+**목표 HF는 2.0** (정책 임계값 2.5). 근거:
+- HF 2.0에서 청산되려면 **ETH가 50% 빠져야** 한다 → 촬영 대기 중 청산 사고 없음
+- 동시에 2.0은 실제 사용자들이 운용하는 현실적 구간이라 심사위원에게 자연스럽다
+  (HF 3~4 + 임계값 4는 안전하지만 "위험하지도 않은 걸 위험하다 한다"로 읽힐 수 있다)
+- 방어 후 **4.0**으로 올라가는 그림 → 영상에서 변화가 뚜렷하다
+
+**금액 (담보가치 C 기준, WETH 청산임계값 0.83):**
+- 차입 = `0.83·C / 2.0` = **0.415·C** → HF 2.0
+- 방어 = 부채의 **절반 상환**(0.207·C) → HF 4.0
+- ⚠️ **빌린 USDC가 그대로 지갑에 남으므로 방어용 실탄을 따로 살 필요가 없다.** 상환은 빌린 돈을 도로 갚는 것
+
+**준비 절차 (전부 화면 밖):**
+1. 실행 지갑 `0x2b33…BcE3`에 **WETH** + 가스용 Base ETH 소액
+   (경로: 업비트 → 개인 지갑 → 실행 지갑. 거래소에서 실행 지갑으로 직접 보내지 말 것)
+2. Pool에 WETH approve → `aave-v3/supply` (담보 공급)
+3. `aave-v3/borrow` USDC = 0.415·C → HF 2.0 착지
+4. Pool에 USDC approve (나중 상환용)
+- ⚠️ HF는 매 단계 `aave-v3/get-user-account-data`로 **실측**할 것. 계산값을 믿지 말 것. **1.0 밑은 청산**
+- ⚠️ 위 2~4는 **전부 KeeperHub를 통해야 한다** (실행 지갑은 KeeperHub만 서명 가능) — 아래 미검증 목록 E 참조
 
 **⚠️ Aave 공식 Pool 문서 대조로 나온 선행조건 (8/10) — 빠뜨리면 3막이 카메라 앞에서 실패한다:**
 
@@ -520,9 +539,9 @@ executes through KeeperHub beats a polished demo that never touches a chain."*
 | 막 | 보여줄 것 | 대응하는 심사 기준 |
 |---|---|---|
 | 1. 배치 | 대시보드에 주소 입력 → analyzer가 Base Aave 실데이터 조회 → `create_workflow`로 감시망 자동 생성. KeeperHub UI에 워크플로우가 실제로 생긴 걸 보여준다 | Use of KeeperHub surfaces (MCP, workflow builder) |
-| 2. 진단 | 실측 HF(예: 1.31)를 `prompts/diagnoser.md`→`strategist.md`에 태워 `{severity:high}` → `{action:"SUPPLY_COLLATERAL"}`. **출력이 액션 enum 밖으로 못 나간다**는 점을 명시 | Originality / 안전성 서사 |
-| 3. 실행 ★ | `execute_protocol_action`으로 `aave-v3/supply` 실행 → 응답의 tx 링크. Turnkey가 서명 — 사람 키도 메타마스크 팝업도 없다 | **Does it execute onchain (최고 가중치)** |
-| 4. 검증 | BaseScan에서 tx 해시 열기. 스폰서 형태(From=릴레이어, Value=0)를 **설명하면서** Internal Transactions 탭으로 실제 호출을 보여준다. 이어서 HF 재조회 → 1.31 → 2.1로 **실제로 회복** | 실행 증명 |
+| 2. 진단 | 실측 HF(≈2.0, 정책 임계값 2.5)를 `prompts/diagnoser.md`→`strategist.md`에 태워 `{severity}` → `{action:"REPAY_DEBT"}`. **출력이 액션 enum 밖으로 못 나간다**는 점을 명시 | Originality / 안전성 서사 |
+| 3. 실행 ★ | `execute_protocol_action`으로 `aave-v3/repay`(부채의 절반) 실행 → 응답의 tx 링크. Turnkey가 서명 — 사람 키도 메타마스크 팝업도 없다 | **Does it execute onchain (최고 가중치)** |
+| 4. 검증 | BaseScan에서 tx 해시 열기. 스폰서 형태(From=릴레이어, Value=0)면 **설명하면서** Internal Transactions 탭으로 실제 호출을 보여준다(스폰서 미적용이면 From=우리 지갑 — 둘 다 정상). 이어서 HF 재조회 → **2.0 → 4.0으로 실제 회복** | 실행 증명 |
 | 5. 관측 | KeeperHub audit trail: trigger / simulation result / submitted tx / gas used / outcome / timestamp | Reliability and observability |
 
 **차별화 대사 (공고의 심사 기준 4번용) — ⚠️ 8/10 재조정:**
