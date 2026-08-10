@@ -461,6 +461,31 @@ executes through KeeperHub beats a polished demo that never touches a chain."*
 - ⚠️ 담보·부채 **둘 다 USDC**로. 가격 변동이 없어야 HF가 고정되고 촬영 중 청산 사고가 없다
 - ⚠️ HF는 매 단계 `aave-v3/get-user-account-data`로 실측할 것. **1.0 밑은 청산**
 
+**⚠️ Aave 공식 Pool 문서 대조로 나온 선행조건 (8/10) — 빠뜨리면 3막이 카메라 앞에서 실패한다:**
+
+1. **`KEEPERHUB_DEV_CHAIN_ID`를 `8453`(Base)으로 바꿔야 한다.**
+   `executors/keeperhub.ts`의 기본값이 `"11155111"`(Sepolia)이다. 안 바꾸면 **Aave가 지원 안 되는
+   Sepolia로 조용히 나가서** 8/9에 몇 시간 태운 그 실패를 그대로 반복한다. `app/.env`에 명시할 것.
+2. **`supply` 전에 ERC20 `approve()`가 필요하다.** 공식 문서: *"the Pool contract must have allowance()
+   to spend funds on behalf of msg.sender"*. `repay`도 마찬가지다.
+   기존 `sentinel-approve-usdc-pool` 워크플로우는 **Sepolia 주소**라 못 쓴다 — Base Pool/USDC로 새로 해야 한다.
+   USDC 하나에 max approve 한 번이면 supply·repay 둘 다 커버된다.
+3. **`interestRateMode`는 `2`(variable)를 명시적으로 넘긴다.** 공식 문서가 "should always be passed 2"라고
+   못박았고 stable 모드는 폐기됐다. KeeperHub에선 optional 필드라 기본값을 신뢰하지 말 것.
+   `referralCode`는 `0`(referral 프로그램 비활성) — 우리 §3 함정 13번과 일치.
+
+**확정 주소:**
+- Base Aave v3 Pool `0xA238Dd80C259a72e81d7e4664a9801593F98d1c5` (코드에서 실사용 검증됨, `analyzer.ts`)
+- Base USDC — **아직 문서에 없다. 지어내지 말고** `Pool.getReservesList()` 또는 aave-address-book으로
+  확인해서 여기 적을 것 (8/9에 기기2가 같은 방식으로 대조했다)
+
+**그 외 문서에서 확인된 것 (우리 구현과 일치):**
+- `getUserAccountData` 반환 6개(담보/부채/여력/청산임계값/LTV/HF)가 `analyzer.ts` 디코딩과 정확히 일치.
+  base currency는 가격피드 기준(8자리 소수), HF는 18자리 — 우리 포맷터가 쓰는 값과 같다
+- 부채가 있으면 **HF가 1 밑으로 내려가는 만큼은 `withdraw`가 막힌다** → 재촬영 리셋 시 부분 인출만 가능
+  (전액은 `type(uint256).max`이지만 부채가 남아 있으면 거부된다)
+- 청산은 HF < 1에서 발생하고 close factor 0.5 — 한 번에 최대 50%까지 청산된다
+
 **5막 구성 (3~4분):**
 
 | 막 | 보여줄 것 | 대응하는 심사 기준 |
