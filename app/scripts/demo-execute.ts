@@ -27,22 +27,22 @@ async function main() {
   const [actionType, paramsJson] = process.argv.slice(2);
   if (!actionType) {
     console.error(
-      `사용법: npm run demo:execute -- <ACTION_TYPE> '{"asset":"0x...","amount":"1"}'`,
+      `Usage: npm run demo:execute -- <ACTION_TYPE> '{"asset":"0x...","amount":"1"}'`,
     );
     process.exit(1);
   }
   if (!isKnownActionType(actionType)) {
-    console.error(`알 수 없는 액션: "${actionType}" — architecture.md §10 표에 없음`);
+    console.error(`Unknown action: "${actionType}" — not in the table in architecture.md §10`);
     process.exit(1);
   }
 
   const params = paramsJson ? JSON.parse(paramsJson) : {};
   const action: Action = { type: actionType, params };
 
-  console.log("[executor] 실행:", action);
+  console.log("[executor] Executing:", action);
   const executor = new KeeperHubExecutor();
   const result = await executor.execute(action);
-  console.log("[executor] 결과:", result);
+  console.log("[executor] Result:", result);
 }
 
 main().catch((err) => {

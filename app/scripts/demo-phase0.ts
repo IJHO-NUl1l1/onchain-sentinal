@@ -10,18 +10,18 @@ import { KeeperHubExecutor } from "../executors/keeperhub";
 async function main() {
   const address = process.argv[2];
   if (!address) {
-    console.error("사용법: npm run demo:phase0 -- <walletAddress>");
+    console.error("Usage: npm run demo:phase0 -- <walletAddress>");
     process.exit(1);
   }
 
-  console.log(`[analyzer] 지갑 분석 중: ${address}`);
+  console.log(`[analyzer] Analyzing wallet: ${address}`);
   const profile = await analyzeWallet(address);
-  console.log("[analyzer] 리스크 프로파일:", profile);
+  console.log("[analyzer] Risk profile:", profile);
 
-  console.log("[executor] KeeperHub에 감시망 배치 중...");
+  console.log("[executor] Deploying the watch to KeeperHub...");
   const executor = new KeeperHubExecutor();
   await executor.provisionMonitoring(profile);
-  console.log("[executor] 완료 — KeeperHub 대시보드에서 워크플로우 확인 가능");
+  console.log("[executor] Done — the workflow is now visible in the KeeperHub dashboard");
 }
 
 main().catch((err) => {

@@ -14,7 +14,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Sentinel",
-  description: "지갑 감시망을 설계해 배치하고 온체인에서 직접 방어하는 자율 가디언",
+  description:
+    "An autonomous guardian that designs and deploys a watch for your wallet, then defends it onchain.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

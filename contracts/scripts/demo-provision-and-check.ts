@@ -21,9 +21,9 @@ async function main() {
   const tx1 = await vault.setPolicy(FLR_USD_FEED_ID, 500n, { gasLimit: CHECK_GAS_LIMIT });
   await tx1.wait();
   const policy = await vault.policies(signer.address);
-  console.log("[setPolicy] 완료 — 실제 FTSO 가격 기록됨: anchorPrice =", policy[1].toString());
+  console.log("[setPolicy] Done — anchored to a live FTSO price: anchorPrice =", policy[1].toString());
 
-  console.log("[checkAndExecute] 실행");
+  console.log("[checkAndExecute] Executing");
   const tx2 = await vault.checkAndExecute(signer.address, { gasLimit: CHECK_GAS_LIMIT });
   const receipt = await tx2.wait();
   console.log("[checkAndExecute] status:", receipt?.status, "tx:", receipt?.hash);
@@ -38,7 +38,7 @@ async function main() {
   }
 
   const policyAfter = await vault.policies(signer.address);
-  console.log("[결과] isLocked:", policyAfter[3]);
+  console.log("[result] isLocked:", policyAfter[3]);
 }
 
 main().catch((err) => {

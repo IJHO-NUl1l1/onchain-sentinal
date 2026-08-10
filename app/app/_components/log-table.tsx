@@ -8,29 +8,31 @@ interface LogEntry {
   rationale: string;
 }
 
-// UI 골격 단계 — Agent 로직(diagnoser/strategist) 붙으면 실제 판단 로그로 교체.
+// ⚠️ UI 골격 단계 — 아직 실제 판단 로그가 아니라 **샘플 데이터**다.
+// diagnoser/strategist 결과를 저장·조회하는 배선이 붙으면 교체한다.
+// 데모 영상에서 이걸 실제 로그처럼 비추지 말 것 (architecture.md §8-1 정직성 체크).
 const PLACEHOLDER_LOGS: LogEntry[] = [
   {
     timestamp: "2026-08-08 14:32",
     severity: "medium",
-    diagnosis: "담보 자산 가격 8% 하락 감지",
-    action: "감시 강화",
-    rationale: "청산 임계값까지 여유 있으나 변동성 추세 확인 필요",
+    diagnosis: "Collateral price dropped 8%",
+    action: "Increase monitoring",
+    rationale: "Still clear of the liquidation threshold, but the volatility trend needs watching",
   },
   {
     timestamp: "2026-08-08 09:10",
     severity: "low",
-    diagnosis: "정기 헬스 팩터 점검",
-    action: "조치 없음",
-    rationale: "헬스 팩터 안전 범위 유지",
+    diagnosis: "Scheduled health factor check",
+    action: "No action",
+    rationale: "Health factor remains within the safe range",
   },
 ];
 
 const SEVERITY_LABEL: Record<Severity, string> = {
-  low: "낮음",
-  medium: "중간",
-  high: "높음",
-  critical: "긴급",
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+  critical: "Critical",
 };
 
 // 텍스트를 색칠하는 대신 왼쪽 바 하나로만 심각도를 표시 — 한 번에 여러 색이
@@ -46,12 +48,12 @@ export function LogTable() {
   return (
     <section className="rounded-lg border border-zinc-200 dark:border-zinc-800 p-6">
       <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-4">
-        판단 로그
+        Decision log
       </h2>
 
       {PLACEHOLDER_LOGS.length === 0 ? (
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          아직 기록이 없습니다.
+          No entries yet.
         </p>
       ) : (
         <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">

@@ -107,13 +107,13 @@ export async function getAaveAccountData(walletAddress: string): Promise<AaveAcc
 export function formatAaveAccountData(data: AaveAccountData): string {
   const hf =
     data.healthFactor > BigInt(2) ** BigInt(255)
-      ? "무한대 (부채 없음)"
+      ? "infinite (no debt)"
       : formatUnits(data.healthFactor, 18);
   return [
-    `담보 총액(base): ${formatUnits(data.totalCollateralBase, 8)}`,
-    `부채 총액(base): ${formatUnits(data.totalDebtBase, 8)}`,
-    `헬스팩터: ${hf}`,
+    `Total collateral (base): ${formatUnits(data.totalCollateralBase, 8)}`,
+    `Total debt (base): ${formatUnits(data.totalDebtBase, 8)}`,
+    `Health factor: ${hf}`,
     `LTV: ${(Number(data.ltv) / 100).toFixed(2)}%`,
-    `청산 임계값: ${(Number(data.currentLiquidationThreshold) / 100).toFixed(2)}%`,
+    `Liquidation threshold: ${(Number(data.currentLiquidationThreshold) / 100).toFixed(2)}%`,
   ].join("\n");
 }

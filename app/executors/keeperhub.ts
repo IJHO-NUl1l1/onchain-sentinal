@@ -122,7 +122,7 @@ export class KeeperHubExecutor implements Executor {
         name: "create_workflow",
         arguments: {
           name: `sentinel-${profile.walletAddress}`,
-          description: `Sentinel이 자동 생성한 감시망 — ${profile.walletAddress}`,
+          description: `Watch designed and deployed by Sentinel for ${profile.walletAddress}`,
           nodes,
           edges,
           enabled: true,

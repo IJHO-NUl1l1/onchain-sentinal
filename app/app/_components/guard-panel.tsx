@@ -36,7 +36,7 @@ export function GuardPanel() {
         setWatched(trimmed);
       } catch (err) {
         setWatched(null);
-        setError(err instanceof Error ? err.message : "등록 중 오류가 발생했습니다.");
+        setError(err instanceof Error ? err.message : "Failed to register the wallet.");
       }
     });
   }
@@ -57,7 +57,7 @@ export function GuardPanel() {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-              {isPending ? "등록 중…" : watched ? "감시 중" : "미등록"}
+              {isPending ? "Deploying…" : watched ? "Guarded" : "Not guarded"}
             </span>
             {watched && !isPending && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
           </div>
@@ -67,7 +67,7 @@ export function GuardPanel() {
             </p>
           ) : (
             <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
-              지갑 주소를 등록하면 감시망을 설계해 배치합니다.
+              Enter a wallet address and the agent will design and deploy its watch.
             </p>
           )}
         </div>
@@ -88,7 +88,7 @@ export function GuardPanel() {
           disabled={isPending}
           className="rounded-md bg-zinc-900 dark:bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-50 dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-300 transition-colors disabled:opacity-50"
         >
-          {isPending ? "등록 중…" : watched ? "변경" : "감시 시작"}
+          {isPending ? "Deploying…" : watched ? "Change" : "Start guarding"}
         </button>
       </form>
 
