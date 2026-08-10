@@ -505,12 +505,72 @@ executes through KeeperHub beats a polished demo that never touches a chain."*
 | 4. 검증 | BaseScan에서 tx 해시 열기. 스폰서 형태(From=릴레이어, Value=0)를 **설명하면서** Internal Transactions 탭으로 실제 호출을 보여준다. 이어서 HF 재조회 → 1.31 → 2.1로 **실제로 회복** | 실행 증명 |
 | 5. 관측 | KeeperHub audit trail: trigger / simulation result / submitted tx / gas used / outcome / timestamp | Reliability and observability |
 
-**차별화 대사 (공고의 심사 기준 4번용):** KeeperHub 자체 템플릿 갤러리에도 "Aave V3 Health Factor
-Guardian"이 있다(임계값 1.5 하드코딩, 사람이 채우는 정적 템플릿). 우리는 **지갑을 분석해 감시망을
-매번 새로 설계**한다 — 우리 org에 실제로 생성된 `sentinel-0x2b33…` / `sentinel-0x6Bc68c…`가 그 증거.
+**차별화 대사 (공고의 심사 기준 4번용) — ⚠️ 8/10 재조정:**
+`search_templates` 실사 결과, 공개 템플릿에 `Aave V3 Health Factor Guardian`뿐 아니라
+**`Aave V3 Auto-Repay on Low Health`**, `Aave V3 Leveraged Position Liquidation Guard (Base)`,
+`Aave V3 wstETH Position Health Monitor + Auto-Repay`가 **이미 있다.**
+→ **"우리는 자동으로 방어한다"는 차별화가 아니다.** 그건 기성 템플릿이 이미 한다. 이 대사로 가면
+   심사위원이 "템플릿으로 되는 걸 만들었네"라고 읽는다.
+
+**진짜 차별점은 실행이 아니라 그 앞단 두 개다:**
+1. **감시망을 사람이 고르지 않는다.** 템플릿은 사람이 자산·임계값(1.5 등)을 채워 넣는 정적 폼이다.
+   우리는 지갑을 실제로 조회해 상태를 보고 **감시망을 매번 새로 설계·생성**한다
+   (증거: 서로 다른 두 주소로 실제 생성된 `sentinel-0x2b33…` / `sentinel-0x6Bc68c…`).
+2. **대응을 규칙이 아니라 LLM이 판단하되, 액션 enum 밖으로 못 나간다.** 템플릿의 auto-repay는
+   `if HF < 1.5 then repay` 고정 규칙이다. 우리는 실데이터를 LLM에 태워 진단을 받고, 그 출력이
+   사전정의 enum으로 제한된다 — §0장 "판단은 LLM, 실행은 결정론적 인프라"의 구현.
 
 **재촬영 대비:** `provisionMonitoring`은 `idempotency_key = provision-<주소>`라 여러 번 돌려도
 워크플로우가 안 쌓인다. 3막을 다시 찍으려면 `aave-v3/withdraw`로 담보를 빼 HF를 다시 떨어뜨리면 된다.
+
+**❓ 미검증 가정 목록 (8/10) — 시나리오 최종 확정 전에 공식 자료로 메울 것.**
+아래는 **공식 문서로 확인한 게 아니라 추론·일반지식으로 채운 부분**이다. 촬영 전에 근거를 확보한다.
+
+*A. Aave Base 시장 파라미터 — 위험도 최상 (숫자가 전부 여기서 나온다)*
+- [ ] Base USDC의 **LTV / 청산 임계값**. 위 "supply 10 → borrow 5~6 → HF 1.3~1.4"와 4막의 "2.1로 회복"은
+      내가 청산임계값을 대략 78%로 **가정**하고 계산한 값이다. 실제 값에 따라 대본 숫자가 전부 바뀐다
+- [ ] **USDC를 담보로 넣고 USDC를 빌리는 게 허용되는가** (isolation mode / siloed borrowing 여부).
+      막혀 있으면 사전 준비 자체가 성립하지 않는다 ← 가장 먼저 확인
+- [ ] Base USDC의 borrowing enabled 여부 / supply·borrow cap
+- [ ] **Base USDC 컨트랙트 주소**와 decimals(6으로 가정 중). 10 USDC = `"10000000"`인지 확정 필요
+→ 자료: Aave Base 마켓의 리저브 설정(app.aave.com 또는 aave-address-book / `Pool.getConfiguration`)
+
+*B. `execute_protocol_action` 응답 형태 — 3막의 결과물*
+- [ ] **tx 링크를 돌려주는가.** `toTxResult`가 `body.transactionLink`를 읽는데 protocol action 응답에
+      그 필드가 오는지 미확인. 안 오면 3막에서 보여줄 링크를 다른 데서 구해야 한다
+- [ ] 실행 상태를 어디서 조회하는가 (`get_direct_execution_status` 대상이 아님이 확인됨)
+→ 자료: KeeperHub Direct Execution / API 문서의 protocol action 응답 예시
+
+*C. Audit trail — 5막 전체가 여기 걸려 있다*
+- [ ] **MCP로 직접 실행한 protocol action이 audit trail에 남는가**, 아니면 워크플로우 실행만 남는가
+- [ ] 공고가 말한 항목(trigger/simulation result/submitted tx/gas used/outcome/timestamp)이
+      우리 실행에도 그대로 뜨는가. 우리는 시뮬레이션을 안 하므로 "simulation result"는 빈다
+→ 자료: KeeperHub Audit trail / Keeper Runs 문서
+
+*D. 4막 서사 — 스폰서 형태가 실제로 나오는가*
+- [ ] Base 메인넷에서 **가스 크레딧이 남아 있어야** 스폰서십이 적용된다. 소진 상태면 "From=우리 지갑"인
+      일반 형태로 나온다. 두 경우 다 정상이지만 **대사가 달라진다** → 촬영 전 billing 페이지 확인
+→ 자료: KeeperHub 대시보드 billing(가스 크레딧 잔여)
+
+*E. 자금 경로 — 내 일반지식이지 확인된 사실이 아니다*
+- [ ] 업비트가 USDC를 **Base 네트워크로** 출금 지원하는가 (안 되면 브리지 비용이 USDC 값보다 크다)
+- [ ] "거래소가 delegation 코드 있는 주소로의 출금을 거부할 수 있다"는 것도 **추측**이다.
+      어차피 개인 지갑 경유가 안전하니 실무엔 영향 없지만 근거로 쓰지는 말 것
+→ 자료: 업비트 출금 안내
+
+*F. 사소하지만 기록해 둘 추론*
+- base currency 8자리·HF 18자리 소수: Pool 문서에 자릿수 명시가 없다. 우리 코드가 그렇게 가정하고
+  말이 되는 값이 나왔으니 **경험적으로만** 검증됨
+- USDC max approve 한 번이 supply·repay 둘 다 커버: ERC20 allowance 의미상 맞다(위험 낮음)
+- `create_workflow`의 `idempotency_key` 24h 윈도우: `execute_check_and_execute` 스키마엔 명시돼 있으나
+  `create_workflow`는 미확인. 중복이 안 쌓이는 건 경험적으로만 확인됨
+- [ ] `web3/approve-token`이 Base에서 동작하는지·파라미터 형태 (`list_action_schemas`로 확인 가능)
+
+*G. 제출 절차*
+- [ ] 바운티를 **어떻게** 내는가 (별도 폼인지 BUIDL 첨부인지)
+- [ ] 제출 폼이 브랜치 URL을 받는가 (§8-1 단일 레포 결정의 전제)
+
+---
 
 **💰 바운티(별도 $1,000, Grand Prize와 중복 수상 가능) — 놓치지 말 것:**
 "Best Onboarding UX Improvement … **a clear teardown of where you got stuck with proposed fixes**".
