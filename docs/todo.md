@@ -24,9 +24,12 @@
 기술 코어는 두 트랙 다 §0-1 두 축을 이미 실증했다. **남은 최대 리스크는 기능이 아니라 제출물이다**
 — 영상·README가 두 트랙 다 0%. 지금부터는 신규 기능보다 제출물을 먼저 끝내는 편이 안전하다.
 
-**다음 세션 시작점 (8/9 세션 종료 시점 기준) — 아래 "최근 작업 로그" 맨 마지막 항목 필독:**
-Base(KeeperHub 쪽)에 자금 준비하고 `execute()` 라이브 검증 → Flare `FlareExecutor` 연결 →
-두 트랙 다 데모 영상·README. 상세는 로그 참조.
+**▶ 다음 작업 순서 (8/10 개정 — 근거·상세는 architecture.md §8-1):**
+1. `FlareExecutor` 구현 + `register-wallet.ts` executor 선택 배선 ← **KeeperHub 제출 전에 끝낼 것**
+   (제출 브랜치를 동결하면 그 코드가 8/20까지 심사 대상이라, 스텁이면 영원히 스텁으로 남는다)
+2. README 공통 골격 + 🔵 KeeperHub 버전 → 데모 영상 → `submission/keeperhub` 동결 → **조기 제출**
+3. 🟠 Flare README + 영상 (+여유 시 `offerIncentive`) → `submission/flare` 동결 → 제출
+- `execute()` Base 라이브 검증은 자금 도착 시에만. §0-1 기준 이미 통과라 **스코프밸브 대상**.
 
 ---
 
@@ -127,9 +130,12 @@ Base(KeeperHub 쪽)에 자금 준비하고 `execute()` 라이브 검증 → Flar
 - [ ] 데모 영상 촬영 + 편집
       ※ ⚠️ 스폰서 tx는 지갑 주소 거래목록에 안 뜬다. "지갑 열어 잔고 확인" 연출 불가.
         **tx 해시 → Internal Transactions 탭** 구성으로 촬영할 것 (architecture.md 3장)
-- [ ] README 작성 (차별화 섹션: Hub 정적템플릿 vs AI 동적생성)
-      ※ tx 해시로 검증하라는 안내 문구 필수
-- [ ] **KeeperHub 제출 (8/13 19:00)** (레포 + 영상 + **tx 해시** 링크)
+- [ ] README 작성 — **`submission/keeperhub` 브랜치의 루트 README = KeeperHub 전용** (§8-1)
+      ※ §0-1 두 축 중심 서술(CLAUDE.md 규칙) / 차별화: Hub 정적템플릿 vs AI 동적생성
+      ※ tx 해시(`0x8632b1ae…`)로 검증하라는 안내 문구 필수
+- [ ] `submission/keeperhub` 브랜치 동결 + 태그 (심사 8/13-8/20 내내 불변이어야 함)
+- [ ] **KeeperHub 제출** — 마감(8/13 19:00) 기다리지 말고 준비되는 대로.
+      제출 URL은 브랜치 URL(`/tree/submission/keeperhub`)
 
 ## Phase D — Flare 버전 (8/9 예정보다 일찍 병렬 착수 → 8/15 04:59) 🟠
 
@@ -157,12 +163,18 @@ Base(KeeperHub 쪽)에 자금 준비하고 `execute()` 라이브 검증 → Flar
       `eth_getCode`로 실제 bytecode 존재 확인. 익스플로러:
       https://coston2-explorer.flare.network/address/0xBf5778109e894b7C093D91B8a7518c95Fe74c3EF
       제출물 "smart contract address"에 이 주소 기입하면 됨 — architecture.md §3에도 기록.
-- [ ] FlareExecutor 어댑터 (`setPolicy`, `agentRespond`)
+- [ ] **FlareExecutor 어댑터 (`setPolicy`, `agentRespond`) ← 최우선, KeeperHub 제출 전에** (§8-1)
+      ※ 지금 `throw` 스텁이고 파일 주석도 낡음("컨트랙트가 아직 없어" — 8/9에 배포됨)
+      ※ `contracts/scripts/demo-provision-and-check.ts`가 이미 하는 일을 인터페이스로 감싸는 것
+      ※ 명시적 `gasLimit` 필수 (FLR/USD 매 블록 갱신 → 자동 견적 빗나감, 8/9 실증)
+      ※ 같이: `register-wallet.ts`의 `new KeeperHubExecutor()` 하드코딩 → executor 선택으로
+        (CLAUDE.md "Executor 경계" 위반 상태 해소)
 - [ ] 키퍼 스크립트 (퍼미션리스 `checkAndExecute` 주기 호출)
 - [ ] (스코프밸브) FDC 유출검증 - 시간 되면 실구현, 안 되면 인터페이스+로드맵
 - [ ] Flare 데모 영상
-- [ ] Flare 제출 서면 (기존/신규 구분 + 로드맵)
-- [ ] **Flare 제출** (레포 + 영상 + 컨트랙트 주소)
+- [ ] Flare 제출 서면 (기존/신규 구분 + 로드맵) — **`submission/flare` 브랜치 루트 README = Flare 전용**
+- [ ] `submission/flare` 브랜치 동결 + 태그
+- [ ] **Flare 제출** (브랜치 URL + 영상 + 컨트랙트 주소 `0xBf5778…c3EF`)
 
 ## Phase E — CTC (8/13 이후) 🟣
 
@@ -181,6 +193,8 @@ Base(KeeperHub 쪽)에 자금 준비하고 `execute()` 라이브 검증 → Flar
       액션 enum), Flare=FTSO 가격 기반 담보 정책(`SentinelVault.setPolicy`). 둘 다 이미
       실제 코드/배포로 구현됐으니 더 논의할 필요 없이 확정된 것으로 처리.
 - [ ] 데모 시나리오 자산·급락 연출 방법
+- [ ] **제출 폼이 브랜치 URL을 받는지 확인 (사용자)** — 안 받거나 "대회 전용 레포"를 규정으로
+      요구하면 §8-1의 단일 레포 결정을 뒤집고 레포를 쪼개야 한다. 두 대회 병행 제출 허용 여부도 같이 확인.
 - [x] 두 마감 타임존 최종 확인 (8/9) — KeeperHub 8/13 19:00 KST 확정. Flare는 기존 8/15 04:59 유지
       (별도 재확인 필요시 진행)
 - [ ] ★ Safe + Zodiac Roles 채택 여부 (온체인 액션 화이트리스트 ↔ 가스 스폰서십 배타. 첫 tx는 끝났으니
@@ -264,3 +278,9 @@ Base(KeeperHub 쪽)에 자금 준비하고 `execute()` 라이브 검증 → Flar
   다음 = ①README·데모영상 착수(최우선, 둘 다 0%) ②`FlareExecutor` 스텁 해소(현재 Hardhat 스크립트로
   직접 호출 중이라 Executor 인터페이스를 안 거침 — CLAUDE.md "Executor 경계" 규칙과 어긋남)
   ③Base 자금 도착 시 `execute()` 라이브 검증(§0-1 기준으론 이미 통과라 스코프밸브 대상)
+- 8/10 기기1: 제출물 구성 결정(architecture.md §8-1 신설). 핵심은 **KeeperHub 심사창(8/13-8/20) 안에
+  Flare 마감(8/15)이 통째로 들어간다**는 것 — 같은 브랜치면 심사 중에 무관한 커밋이 계속 쌓인다.
+  결론: 레포는 하나로 두되 제출은 `submission/keeperhub` / `submission/flare` 브랜치로 동결.
+  브랜치마다 루트 README가 달라져 두 심사위원이 각자 트랙 문서만 본다(앵커 분리안은 폐기).
+  덤으로 순서도 바뀜 — `FlareExecutor`를 KeeperHub 제출 *전에* 뚫는다(동결되면 스텁이 8/20까지 박제됨).
+  다음 = `FlareExecutor` + executor 선택 배선 → README → 영상 → 동결·제출.
