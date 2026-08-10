@@ -24,12 +24,25 @@
 기술 코어는 두 트랙 다 §0-1 두 축을 이미 실증했다. **남은 최대 리스크는 기능이 아니라 제출물이다**
 — 영상·README가 두 트랙 다 0%. 지금부터는 신규 기능보다 제출물을 먼저 끝내는 편이 안전하다.
 
-**▶ 다음 작업 순서 (8/10 개정 — 근거·상세는 architecture.md §8-1):**
+**▶ 다음 작업 순서 (8/10 개정 — 근거·상세는 architecture.md §8-1, §8-2):**
 1. `FlareExecutor` 구현 + `register-wallet.ts` executor 선택 배선 ← **KeeperHub 제출 전에 끝낼 것**
    (제출 브랜치를 동결하면 그 코드가 8/20까지 심사 대상이라, 스텁이면 영원히 스텁으로 남는다)
 2. README 공통 골격 + 🔵 KeeperHub 버전 → 데모 영상 → `submission/keeperhub` 동결 → **조기 제출**
 3. 🟠 Flare README + 영상 (+여유 시 `offerIncentive`) → `submission/flare` 동결 → 제출
 - `execute()` Base 라이브 검증은 자금 도착 시에만. §0-1 기준 이미 통과라 **스코프밸브 대상**.
+
+**🔒 8/10 확정된 결정 (다시 논의하지 말 것):**
+- 데모 포지션 = **WETH 담보 + USDC 차입**, **Base 메인넷(8453)**. 목표 HF 2.0 / 정책 임계값 2.5
+- **Sepolia 폴백 폐기.** Aave v3 액션이 Sepolia 미지원이고 테스트넷 우회는 안 하기로 함
+  → 자금 도착이 **임계경로**. 안 오면 Aave 실행 장면 자체가 불가능하다
+- 제출은 레포 하나 + `submission/*` 브랜치 동결 (§8-1)
+- Base 리저브 파라미터·주소·자릿수는 **온체인 조회로 확정 완료** (§8-2 표, `app/scripts/check-base-reserve.ts`)
+
+**❓ 남은 미검증 항목은 architecture.md §8-2 "미검증 목록" 참조** (A는 해소, B~I 남음).
+그중 구조적으로 큰 두 가지:
+- **셋업(approve·supply·borrow)을 전부 KeeperHub로 해야 한다** — 실행 지갑은 KeeperHub만 서명 가능.
+  게다가 `aave-v3/borrow`는 액션 enum에 없어서 **MCP를 손으로 호출**해야 한다
+- **Aave는 ETH가 아니라 WETH를 받는다** — 실행 지갑에 WETH를 어떻게 넣을지 미해결(거래소 직접 출금? wrap?)
 
 ---
 
@@ -130,8 +143,13 @@
 - [ ] 💰 **바운티 노림수** — 함정 목록 13개를 영문 teardown으로 정리 (§8-2).
       공고의 "Best Onboarding UX Improvement"가 "where you got stuck with proposed fixes"를
       명시적으로 인정한다. $1,000 별도 상금이고 Grand Prize와 중복 수상 가능. 추가 작업이 거의 없다.
-- [ ] 데모 사전 준비: Base USDC 20~30개 확보(업비트 → 개인 지갑 → 실행 지갑) →
-      supply 10 → borrow 5~6 → HF 1.3대 확인. **실탄용 USDC를 지갑에 남길 것** (§8-2)
+- [ ] 데모 사전 준비 (§8-2, 8/10 개정) — **WETH 담보 / USDC 차입, Base 메인넷**
+      - [ ] 실행 지갑에 **WETH** 확보 ← 방법 미해결(거래소 WETH 직접 출금? ETH 받아 wrap?)
+      - [ ] Pool에 WETH approve → `aave-v3/supply`
+      - [ ] `aave-v3/borrow` USDC = 담보가치×0.415 → **HF 2.0 착지**(매 단계 실측)
+      - [ ] Pool에 USDC approve (상환용)
+      ※ 빌린 USDC가 지갑에 남아 방어 실탄이 된다 — 추가 구매 불필요
+      ※ 위 전부 KeeperHub 경유 필수. `aave-v3/borrow`는 enum에 없어 MCP 수동 호출
 - [ ] 데모 영상 촬영 + 편집
       ※ ⚠️ 스폰서 tx는 지갑 주소 거래목록에 안 뜬다. "지갑 열어 잔고 확인" 연출 불가.
         **tx 해시 → Internal Transactions 탭** 구성으로 촬영할 것 (architecture.md 3장)
@@ -290,3 +308,21 @@
   브랜치마다 루트 README가 달라져 두 심사위원이 각자 트랙 문서만 본다(앵커 분리안은 폐기).
   덤으로 순서도 바뀜 — `FlareExecutor`를 KeeperHub 제출 *전에* 뚫는다(동결되면 스텁이 8/20까지 박제됨).
   다음 = `FlareExecutor` + executor 선택 배선 → README → 영상 → 동결·제출.
+- 8/10 기기1 (긴 세션): 코드 변경 2건 + 문서 대폭 정리. **다른 기기로 넘기기 전 상태.**
+  ①`.env`/코드의 `KEEPERHUB_DEV_CHAIN_ID`를 8453(Base)로 — 안 바꿨으면 Aave 미지원 Sepolia로 조용히 나갔다
+  ②`keeperhub.ts`에 Aave 필수 파라미터 기본값 배선(`onBehalfOf`/`to`=실행지갑, repay `interestRateMode:"2"`)
+    + 응답 파싱 실패를 성공으로 보던 것 수정. **`KEEPERHUB_EXECUTOR_ADDRESS`를 `app/.env`에 넣어야 동작**
+  ③UI·워크플로우 설명·데모 콘솔 출력 전부 영어화(노출되는 것만. 주석·docs는 한국어 유지 — CLAUDE.md 규칙)
+  ④데모 시나리오를 공고 기준으로 재설계 → **USDC/USDC 폐기, WETH담보/USDC차입 + Base 확정**(§8-2)
+  ⑤Base 리저브 파라미터를 **온체인 직접 조회로 확정**(WETH 청산임계값 83%, USDC 78%, 주소·자릿수,
+    둘 다 isolation/siloed 아님) — `app/scripts/check-base-reserve.ts` 남겨둠
+  ⑥차별화 대사 수정 — `search_templates` 실사 결과 `Aave V3 Auto-Repay on Low Health` 등이 **이미 공개 템플릿**.
+    "자동 방어"는 차별점이 아니다. 감시망 동적 설계 + enum 제한 LLM 판단으로 서술할 것
+  ⑦`execute_protocol_action`에 `simulate`/`idempotency_key`가 **없다**는 것 발견 → 3막 대본 수정, §3 정정
+  ⑧미검증 목록을 데이터뿐 아니라 **코드가 추측에 기댄 부분까지** 확장(§8-2 B~I)
+
+  **다음 기기가 이어서 할 것 (우선순위):**
+  - 자금(WETH) 경로 해결 ← 임계경로. Sepolia 폴백을 폐기했으므로 대안이 없다
+  - `FlareExecutor` 배선 (제출 브랜치 동결 전 필수)
+  - README·영상 (두 트랙 다 0%, 마감까지 3일)
+  - 사용자 확인 대기: 제출 폼의 브랜치 URL 허용 여부 / 가스 크레딧 잔여 / 업비트 Base 출금 지원
