@@ -393,12 +393,61 @@ Block Latency Feed는 매 블록(~1.8초)마다 갱신되는데, ethers의 자�
          + 레포 구조 결정(코드 쓰기 전 필수) — 완료
 8/7-8/9  🟢 공유 뼈대: Executor 인터페이스 / analyzer·diagnoser·strategist / 액션 enum 확정
          대시보드는 "실행 증명"에 필요한 최소한만. 여기서 화려함을 좇으면 전체가 무너진다 — 완료
-8/9-8/10 🔵 KeeperHub Phase0(지갑 분석 → create_workflow 자동 생성) + Phase2 반자동 데모
-8/11-8/12 🔵 영상·README·제출 준비 ▷ 병렬: 🟠 SentinelVault.sol 착수
-         여유가 나면 이 시점에 Safe+Zodiac 채택 판단 (10장)
+8/9-8/10 🔵 KeeperHub Phase0(지갑 분석 → create_workflow 자동 생성) + Phase2 반자동 데모 — 완료
+8/11-8/12 🔵 영상·README·제출 준비 ▷ 병렬: 🟠 SentinelVault.sol 착수 — Vault는 8/9에 조기 완료
 8/13 19:00 🔵 KeeperHub 제출 → 이후 전부 Flare
 ~8/15 04:59 🟠 Vault·FTSO·Coston2 배포 + FlareExecutor + 영상/서면/제출
 ```
+
+### 8-1. ⭐ 제출물 구성 개정 (8/10 확정)
+
+**배경**: 기술 코어는 두 트랙 다 §0-1 두 축을 통과했다. 남은 리스크는 기능이 아니라 **제출물**
+(영상·README 두 트랙 다 0%). 아래는 그 제출을 어떻게 포장할지의 결정이다.
+
+**⚠️ 결정적 제약 — 심사 기간과 Flare 빌드 기간이 겹친다:**
+KeeperHub 심사는 **8/13-8/20**, Flare 마감은 **8/15**. 즉 Flare 작업 전체가 KeeperHub 심사 창 안에 있다.
+같은 브랜치로 두면 심사위원이 언제 열든 무관한 컨트랙트 커밋이 계속 쌓이고, 최악엔 중간 파손 상태를 본다.
+**심사 시점을 통제할 수 없으므로 제출한 상태가 그대로 얼어 있어야 한다.**
+
+**결정: 레포는 하나, 제출은 브랜치로 동결한다.**
+
+```
+main                    ← 계속 개발. README는 짧은 안내판(두 트랙 갈림길)
+├─ submission/keeperhub ← 8/13 제출 직전 분기. 루트 README = KeeperHub 전용. 이후 불변
+└─ submission/flare     ← 8/15 제출 직전 분기. 루트 README = Flare 전용. 이후 불변
+```
+
+- 제출 폼에는 브랜치 URL(`/tree/submission/keeperhub`)을 넣는다. GitHub이 그 브랜치의 README를 렌더링하므로
+  **브랜치마다 루트 README가 다르다** → 두 심사위원이 각자 트랙에 맞춰진 문서만 본다.
+- 각 브랜치에 태그도 같이 박아 되돌릴 수 없게 한다.
+- ~~"루트 README 하나에 트랙별 섹션 + 앵커"~~ 안은 폐기(8/10). 심사위원은 스캔하듯 읽어서 어느 쪽도 안 읽힌다.
+
+**레포를 쪼개지 않는 이유**: 각 레포에 executor 구현이 하나만 남으면 `Executor` 인터페이스가
+**구현체 1개짜리 추상화**가 되어 과설계로 보인다. "판단은 LLM, 실행은 결정론적 인프라 —
+그래서 실행 엔진을 갈아끼울 수 있다"는 핵심 주장이 코드로 증명되지 않는다. 공유 코드 이중 관리 부담도 크다.
+- **쪼개야 하는 예외 2가지**: ①규정이 "대회 전용 레포"를 명시적으로 요구 ②제출 폼이 브랜치 URL을 안 받음
+  → [ ] **제출 폼 확인 필요(사용자)**. CTC(9/6)는 원저작 조항 때문에 어차피 새 레포다(§11).
+
+**⚠️ 순서 개정 — `FlareExecutor`를 KeeperHub 제출 *전에* 뚫는다:**
+`submission/keeperhub`를 동결하면 그 시점 코드가 8/20까지 심사 대상으로 고정된다.
+그때 `FlareExecutor`가 `throw` 스텁이면 KeeperHub 심사위원은 구현체 1개짜리 인터페이스를 보게 되고,
+나중에 `main`에서 구현해도 **심사본에는 영원히 반영되지 않는다.** 몇 시간짜리 작업으로
+"실행 엔진 두 개를 실제로 갈아끼운다"를 심사본에 넣을 수 있다.
+
+```
+8/10(월) 🟢 FlareExecutor 구현(setPolicy/agentRespond, 명시적 gasLimit 필수)
+         + register-wallet.ts의 KeeperHubExecutor 하드코딩 → executor 선택으로 교체
+         ↑ CLAUDE.md "Executor 경계" 위반 해소 + 아키텍처 주장을 코드로 증명
+         이어서 README 공통 골격 + 🔵 KeeperHub 버전
+8/11-8/12 🔵 데모 영상 촬영 → submission/keeperhub 동결 → **마감 기다리지 말고 제출**
+8/13 19:00 🔵 KeeperHub 마감 (이미 제출 완료 상태여야)
+8/13-8/15 🟠 Flare README + 영상, 여유 시 offerIncentive → submission/flare 동결 → 제출
+```
+
+**정직성 체크(영상 촬영 전 필독):**
+- `log-table.tsx`는 아직 **목업 데이터**다. 실제 로그인 것처럼 비추지 마라 — 패널을 빼고 찍거나 "샘플" 명시.
+- `FlareExecutor` 미구현 상태로 "실행 엔진 2개 추상화"를 README에 쓰면 과장이다. 구현하거나 정확히 서술할 것.
+- 스폰서 tx는 지갑 주소 거래목록에 안 뜬다 → **tx 해시 → Internal Transactions 탭**으로 촬영(§3).
 
 효율 3원칙: ①두뇌 먼저 손은 어댑터로 ②KH 완성도 몰빵, Flare 스코프밸브 준비 ③문서도 코드처럼 파생. ⚠️ 34h는 마무리·배포용, contract는 8/11 병렬착수로 이미 절반 진행 상태여야.
 
