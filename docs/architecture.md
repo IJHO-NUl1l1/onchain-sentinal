@@ -444,6 +444,48 @@ main                    ← 계속 개발. README는 짧은 안내판(두 트랙
 8/13-8/15 🟠 Flare README + 영상, 여유 시 offerIncentive → submission/flare 동결 → 제출
 ```
 
+### 8-2. 🔵 KeeperHub 데모 시나리오 확정 (8/10, 공식 공고 기준)
+
+**공고가 요구하는 것 (인용):** *"We reward agents that execute onchain, a working transaction that
+executes through KeeperHub beats a polished demo that never touches a chain."*
+→ **실행이 최우선 가중치.** 제출물 3종: ①GitHub ②agent가 온체인 실행하는 데모 영상 ③실행한 tx 링크.
+
+**우리 컨셉과의 정합:** 공고의 프레이밍이 *"Agents can think, KeeperHub lets them act"* — 우리 §0장
+"판단(LLM)과 실행(결정론적 인프라)의 분리"와 **같은 말이다.** README·영상은 이 언어를 그대로 쓴다.
+
+**사전 준비 (촬영 전, 화면 밖):** Base 메인넷, 실행 지갑 `0x2b33…BcE3`
+- USDC 20~30개 + 가스 폴백용 Base ETH 소액. 경로는 업비트 → 개인 지갑 → 실행 지갑
+  (거래소에서 실행 지갑으로 직접 X — delegation 코드 때문에 거부될 수 있음)
+- `aave-v3/supply` 10 USDC → `aave-v3/borrow` 5~6 USDC → **HF를 1.3~1.4로 떨어뜨려 둔다**
+- 나머지 ~10 USDC는 지갑에 남긴다 = **방어 액션의 실탄** (전부 담보로 넣으면 방어할 수단이 없다)
+- ⚠️ 담보·부채 **둘 다 USDC**로. 가격 변동이 없어야 HF가 고정되고 촬영 중 청산 사고가 없다
+- ⚠️ HF는 매 단계 `aave-v3/get-user-account-data`로 실측할 것. **1.0 밑은 청산**
+
+**5막 구성 (3~4분):**
+
+| 막 | 보여줄 것 | 대응하는 심사 기준 |
+|---|---|---|
+| 1. 배치 | 대시보드에 주소 입력 → analyzer가 Base Aave 실데이터 조회 → `create_workflow`로 감시망 자동 생성. KeeperHub UI에 워크플로우가 실제로 생긴 걸 보여준다 | Use of KeeperHub surfaces (MCP, workflow builder) |
+| 2. 진단 | 실측 HF(예: 1.31)를 `prompts/diagnoser.md`→`strategist.md`에 태워 `{severity:high}` → `{action:"SUPPLY_COLLATERAL"}`. **출력이 액션 enum 밖으로 못 나간다**는 점을 명시 | Originality / 안전성 서사 |
+| 3. 실행 ★ | `simulate:true`로 먼저(`wouldRevert:false` 확인) → `idempotency_key` 붙여 실제 실행 → `get_direct_execution_status` 폴링 → **transactionHash**. Turnkey가 서명 — 사람 키도 메타마스크 팝업도 없다 | **Does it execute onchain (최고 가중치)** |
+| 4. 검증 | BaseScan에서 tx 해시 열기. 스폰서 형태(From=릴레이어, Value=0)를 **설명하면서** Internal Transactions 탭으로 실제 호출을 보여준다. 이어서 HF 재조회 → 1.31 → 2.1로 **실제로 회복** | 실행 증명 |
+| 5. 관측 | KeeperHub audit trail: trigger / simulation result / submitted tx / gas used / outcome / timestamp | Reliability and observability |
+
+**차별화 대사 (공고의 심사 기준 4번용):** KeeperHub 자체 템플릿 갤러리에도 "Aave V3 Health Factor
+Guardian"이 있다(임계값 1.5 하드코딩, 사람이 채우는 정적 템플릿). 우리는 **지갑을 분석해 감시망을
+매번 새로 설계**한다 — 우리 org에 실제로 생성된 `sentinel-0x2b33…` / `sentinel-0x6Bc68c…`가 그 증거.
+
+**재촬영 대비:** `provisionMonitoring`은 `idempotency_key = provision-<주소>`라 여러 번 돌려도
+워크플로우가 안 쌓인다. 3막을 다시 찍으려면 `aave-v3/withdraw`로 담보를 빼 HF를 다시 떨어뜨리면 된다.
+
+**💰 바운티(별도 $1,000, Grand Prize와 중복 수상 가능) — 놓치지 말 것:**
+"Best Onboarding UX Improvement … **a clear teardown of where you got stuck with proposed fixes**".
+우리는 이미 그 teardown을 갖고 있다 — §3 함정 목록 13개(`abi` 문자열화, `simulate` 불리언,
+`idempotency_key`, EIP-55 체크섬, `referralCode` 누락, 중첩 success/error 파싱, `app/.env` 위치,
+**Aave v3가 Sepolia에서 조용히 실패하는 것**, 가스 견적 불안정 등)는 전부 실제로 막혔던 지점과
+해결책이다. 이걸 영어로 정리해 별도 제출하면 **거의 추가 비용 없이 바운티 후보**가 된다.
+- [ ] 함정 목록 → 영문 teardown 문서로 정리 (KeeperHub 레포 PR 또는 제출물 첨부)
+
 **정직성 체크(영상 촬영 전 필독):**
 - `log-table.tsx`는 아직 **목업 데이터**다. 실제 로그인 것처럼 비추지 마라 — 패널을 빼고 찍거나 "샘플" 명시.
 - `FlareExecutor` 미구현 상태로 "실행 엔진 2개 추상화"를 README에 쓰면 과장이다. 구현하거나 정확히 서술할 것.
