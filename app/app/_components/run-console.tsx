@@ -13,7 +13,7 @@ import {
   stepVerify,
   type AaveSnapshot,
 } from "../_actions/run-steps";
-import type { ActionType, MonitoringProfile } from "../../executors/types";
+import type { ActionType } from "../../executors/types";
 
 // Base 메인넷 확정값 (architecture.md §8-2 — 온체인 조회로 확인)
 const BASE_USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
@@ -25,6 +25,8 @@ type Status = "idle" | "running" | "success" | "error" | "waiting";
 interface Row {
   label: string;
   value: string;
+  /** 이 값이 무엇인지 한 줄 설명 — 영상에서 설명 없이도 읽히도록 */
+  hint?: string;
   href?: string;
   strong?: boolean;
 }
@@ -37,12 +39,15 @@ const STATUS_STYLE: Record<Status, { chip: string; text: string; bar: string }> 
   waiting: { chip: "border-sky-500/40 text-sky-400", text: "AWAITING AGENT", bar: "bg-sky-500" },
 };
 
-function Raw({ value }: { value: unknown }) {
+function Raw({ value, label }: { value: unknown; label: string }) {
   if (value === undefined) return null;
   return (
-    <pre className="mt-3 max-h-64 overflow-auto rounded border border-zinc-800 bg-zinc-950 p-3 font-mono text-[11px] leading-relaxed text-zinc-400">
-      {typeof value === "string" ? value : JSON.stringify(value, null, 2)}
-    </pre>
+    <div className="mt-3">
+      <p className="mb-1 font-mono text-[10px] uppercase tracking-wider text-zinc-600">{label}</p>
+      <pre className="max-h-64 overflow-auto rounded border border-zinc-800 bg-zinc-950 p-3 font-mono text-[11px] leading-relaxed text-zinc-400">
+        {typeof value === "string" ? value : JSON.stringify(value, null, 2)}
+      </pre>
+    </div>
   );
 }
 
@@ -54,6 +59,7 @@ function Step({
   durationMs,
   rows,
   raw,
+  rawLabel,
   error,
   children,
 }: {
@@ -64,6 +70,7 @@ function Step({
   durationMs?: number;
   rows?: Row[];
   raw?: unknown;
+  rawLabel?: string;
   error?: string;
   children?: React.ReactNode;
 }) {
@@ -95,23 +102,26 @@ function Step({
             {rows.map((r) => (
               <div key={r.label} className="flex gap-3 text-xs">
                 <dt className="w-44 shrink-0 text-zinc-500">{r.label}</dt>
-                <dd
-                  className={`min-w-0 break-all font-mono ${
-                    r.strong ? "text-emerald-400" : "text-zinc-300"
-                  }`}
-                >
-                  {r.href ? (
-                    <a
-                      href={r.href}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="underline decoration-zinc-700 underline-offset-2 hover:decoration-emerald-500"
-                    >
-                      {r.value} ↗
-                    </a>
-                  ) : (
-                    r.value
-                  )}
+                <dd className="min-w-0">
+                  <span
+                    className={`block break-all font-mono ${
+                      r.strong ? "text-emerald-400" : "text-zinc-300"
+                    }`}
+                  >
+                    {r.href ? (
+                      <a
+                        href={r.href}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline decoration-zinc-700 underline-offset-2 hover:decoration-emerald-500"
+                      >
+                        {r.value} ↗
+                      </a>
+                    ) : (
+                      r.value
+                    )}
+                  </span>
+                  {r.hint && <span className="mt-0.5 block text-[11px] text-zinc-600">{r.hint}</span>}
                 </dd>
               </div>
             ))}
@@ -123,7 +133,7 @@ function Step({
           </p>
         )}
         {children}
-        <Raw value={raw} />
+        <Raw value={raw} label={rawLabel ?? "Raw response"} />
       </div>
     </section>
   );
@@ -131,12 +141,29 @@ function Step({
 
 function snapshotRows(s: AaveSnapshot): Row[] {
   return [
-    { label: "Health factor", value: s.healthFactor, strong: true },
-    { label: "Total collateral", value: `$${s.collateralUsd}` },
-    { label: "Total debt", value: `$${s.debtUsd}` },
-    { label: "LTV", value: `${s.ltvPercent}%` },
-    { label: "Liquidation threshold", value: `${s.liquidationThresholdPercent}%` },
-    { label: "healthFactor (uint256)", value: s.healthFactorRaw },
+    {
+      label: "Health factor",
+      value: s.healthFactor,
+      strong: true,
+      hint: "How close this position is to liquidation. 1.0 is the point of no return.",
+    },
+    {
+      label: "Total collateral",
+      value: `$${s.collateralUsd}`,
+      hint: "What the wallet has deposited, priced by Aave's own oracle.",
+    },
+    { label: "Total debt", value: `$${s.debtUsd}`, hint: "What it has borrowed against that collateral." },
+    { label: "Max LTV", value: `${s.ltvPercent}%`, hint: "The most it is allowed to borrow." },
+    {
+      label: "Liquidation threshold",
+      value: `${s.liquidationThresholdPercent}%`,
+      hint: "Past this ratio the collateral gets seized.",
+    },
+    {
+      label: "healthFactor (uint256)",
+      value: s.healthFactorRaw,
+      hint: "The unmodified return value from the contract, 18 decimals. Maximum means no debt.",
+    },
   ];
 }
 
@@ -147,7 +174,6 @@ export function RunConsole() {
     status: "idle",
   });
   const [snapshot, setSnapshot] = useState<AaveSnapshot | null>(null);
-  const [profile, setProfile] = useState<MonitoringProfile | null>(null);
 
   const [provision, setProvision] = useState<{
     status: Status;
@@ -182,7 +208,6 @@ export function RunConsole() {
     if (!target) return;
 
     setSnapshot(null);
-    setProfile(null);
     setProvision({ status: "idle" });
     setVerdict(null);
     setVerdictText("");
@@ -197,7 +222,6 @@ export function RunConsole() {
       return;
     }
     setSnapshot(a.data.snapshot);
-    setProfile(a.data.profile);
     setAnalyze({ status: "success", ms: a.durationMs, raw: a.data.snapshot });
 
     setProvision({ status: "running" });
@@ -211,9 +235,27 @@ export function RunConsole() {
       ms: p.durationMs,
       raw: p.data.raw,
       rows: [
-        { label: "Workflow", value: p.data.label ?? "-", strong: true },
-        { label: "Workflow id", value: p.data.reference ?? "-" },
-        ...(p.data.link ? [{ label: "Open in KeeperHub", value: p.data.link, href: p.data.link }] : []),
+        {
+          label: "Workflow",
+          value: p.data.label ?? "-",
+          strong: true,
+          hint: "Named after the wallet — the agent generated it just now, it is not a template someone filled in.",
+        },
+        {
+          label: "Workflow id",
+          value: p.data.reference ?? "-",
+          hint: "KeeperHub's identifier for the watch that now exists on their side.",
+        },
+        ...(p.data.link
+          ? [
+              {
+                label: "Open in KeeperHub",
+                value: p.data.link,
+                href: p.data.link,
+                hint: "The same workflow, seen from KeeperHub's own dashboard.",
+              },
+            ]
+          : []),
       ],
     });
   }
@@ -243,11 +285,28 @@ export function RunConsole() {
       raw: tx.raw,
       err: tx.success ? undefined : "KeeperHub reported the action as unsuccessful",
       rows: [
-        { label: "Action", value: verdict.action, strong: true },
-        { label: "Asset", value: asset },
-        { label: "Amount (base units)", value: amount || "-" },
+        {
+          label: "Action",
+          value: verdict.action,
+          strong: true,
+          hint: "The action the agent picked in step 3, executed verbatim.",
+        },
+        { label: "Asset", value: asset, hint: "The ERC-20 the action moves." },
+        {
+          label: "Amount (base units)",
+          value: amount || "-",
+          hint: "Aave actions take integer base units, not decimals — USDC has 6, WETH has 18.",
+        },
         ...(tx.transactionLink
-          ? [{ label: "Transaction", value: tx.transactionLink, href: tx.transactionLink, strong: true }]
+          ? [
+              {
+                label: "Transaction",
+                value: tx.transactionLink,
+                href: tx.transactionLink,
+                strong: true,
+                hint: "Verify here. If gas was sponsored the sender is a relayer and the real call sits under Internal Transactions.",
+              },
+            ]
           : []),
       ],
     });
@@ -305,38 +364,54 @@ export function RunConsole() {
 
       <Step
         index={1}
-        title="Read onchain state"
-        subtitle="Aave v3 Pool · Base mainnet · getUserAccountData"
+        title="Read the position onchain"
+        subtitle="Calls getUserAccountData on the Aave v3 Pool, Base mainnet. Nothing here is simulated or seeded."
         status={analyze.status}
         durationMs={analyze.ms}
         rows={snapshot ? snapshotRows(snapshot) : undefined}
         raw={analyze.raw}
+        rawLabel="Raw values returned by Aave v3 Pool"
         error={analyze.err}
       />
 
       <Step
         index={2}
-        title="Deploy the watch"
-        subtitle="KeeperHub MCP · create_workflow · designed from the state above"
+        title="Design and deploy the watch"
+        subtitle="Sends create_workflow over KeeperHub's MCP: an hourly job that re-reads this wallet's health factor."
         status={provision.status}
         durationMs={provision.ms}
         rows={provision.rows}
         raw={provision.raw}
+        rawLabel="Raw workflow KeeperHub created"
         error={provision.err}
       />
 
       <Step
         index={3}
-        title="Agent diagnosis"
-        subtitle="Real data in, one action out — constrained to the predefined enum"
+        title="Agent reads it and decides"
+        subtitle="The numbers above go to Claude. It may answer with only one of seven predefined actions — it cannot invent a new one."
         status={verdict ? "success" : snapshot ? "waiting" : "idle"}
         rows={
           verdict
             ? [
-                { label: "Severity", value: String(verdict.severity ?? "-"), strong: true },
-                { label: "Diagnosis", value: String(verdict.diagnosis ?? "-") },
-                { label: "Action", value: String(verdict.action ?? "-"), strong: true },
-                { label: "Rationale", value: String(verdict.rationale ?? "-") },
+                {
+                  label: "Severity",
+                  value: String(verdict.severity ?? "-"),
+                  strong: true,
+                  hint: "How urgent the agent judged this position to be.",
+                },
+                {
+                  label: "Diagnosis",
+                  value: String(verdict.diagnosis ?? "-"),
+                  hint: "Its reading of the state, in its own words.",
+                },
+                {
+                  label: "Action",
+                  value: String(verdict.action ?? "-"),
+                  strong: true,
+                  hint: "Picked from the fixed enum. This is what step 4 will execute.",
+                },
+                { label: "Rationale", value: String(verdict.rationale ?? "-"), hint: "Why it chose that." },
               ]
             : undefined
         }
@@ -344,9 +419,9 @@ export function RunConsole() {
         {snapshot && !verdict && (
           <div className="mt-4">
             <p className="text-xs text-zinc-500">
-              Payload handed to the agent. Paste its JSON verdict back below.
+              This exact payload goes to the agent. Paste its JSON verdict back below.
             </p>
-            <Raw value={handoff} />
+            <Raw value={handoff} label="Payload handed to the agent" />
             <textarea
               value={verdictText}
               onChange={(e) => setVerdictText(e.target.value)}
@@ -367,12 +442,13 @@ export function RunConsole() {
 
       <Step
         index={4}
-        title="Execute onchain"
-        subtitle="KeeperHub signs with Turnkey — no human key, no wallet popup"
+        title="Execute it onchain"
+        subtitle="KeeperHub submits the transaction and Turnkey signs it inside a secure enclave. No human key, no wallet popup."
         status={exec.status}
         durationMs={exec.ms}
         rows={exec.rows}
         raw={exec.raw}
+        rawLabel="Raw response from KeeperHub"
         error={exec.err}
       >
         {verdict?.action && exec.status !== "success" && (
@@ -410,21 +486,31 @@ export function RunConsole() {
 
       <Step
         index={5}
-        title="Verify onchain"
-        subtitle="Re-read the position — the defense has to move real state"
+        title="Confirm the state actually moved"
+        subtitle="Reads the same contract again. A defense that does not change the numbers did not happen."
         status={verify.status}
         durationMs={verify.ms}
         rows={
           after && snapshot
             ? [
-                { label: "Health factor before", value: snapshot.healthFactor },
-                { label: "Health factor after", value: after.healthFactor, strong: true },
+                {
+                  label: "Health factor before",
+                  value: snapshot.healthFactor,
+                  hint: "Measured in step 1, before the agent acted.",
+                },
+                {
+                  label: "Health factor after",
+                  value: after.healthFactor,
+                  strong: true,
+                  hint: "Same call, same contract, after the transaction landed.",
+                },
                 { label: "Debt before", value: `$${snapshot.debtUsd}` },
-                { label: "Debt after", value: `$${after.debtUsd}` },
+                { label: "Debt after", value: `$${after.debtUsd}`, hint: "Lower means the repayment settled." },
               ]
             : undefined
         }
         raw={verify.raw}
+        rawLabel="Raw values returned by Aave v3 Pool (after)"
         error={verify.err}
       >
         {snapshot && verify.status !== "running" && (
