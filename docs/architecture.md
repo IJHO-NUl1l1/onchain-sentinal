@@ -558,6 +558,15 @@ executes through KeeperHub beats a polished demo that never touches a chain."*
   (전액은 `type(uint256).max`이지만 부채가 남아 있으면 거부된다)
 - 청산은 HF < 1에서 발생하고 close factor 0.5 — 한 번에 최대 50%까지 청산된다
 
+**🖥️ 대시보드가 이 5막을 그대로 구현한다 (8/11):** `app/app/_components/run-console.tsx`.
+각 막이 단계 카드 하나이고, **실제로 순차 호출**되므로 화면 순서 = 실행 순서다(연출 아님).
+카드마다 상태·소요시간(ms)·핵심 값+한 줄 설명·**원본 응답 JSON**·익스플로러 링크를 노출한다.
+- 1·2막은 완전 자동(온체인 조회 → `create_workflow`). 4막은 tx 링크와 원본 응답을 그대로 띄운다
+- 3막은 **의도적으로 수동 인계** — 콘솔이 에이전트에게 넘길 페이로드를 보여주고 판단 JSON을 받는다.
+  `diagnoser`/`strategist`가 설계상 스텁이라(§2 "런타임") 자동인 척하지 않는다
+- ⚠️ **콘솔의 5막은 "포지션 재조회"다.** 공고가 말하는 audit trail(=`get_execution` 화면)은 콘솔에 없고
+  **KeeperHub 대시보드에서 따로 보여줘야 한다.** 촬영 대본에 반영할 것
+
 **5막 구성 (3~4분):**
 
 | 막 | 보여줄 것 | 대응하는 심사 기준 |
@@ -603,8 +612,11 @@ isolation/siloed 여부 전부 확인. **더 이상 추측 아님.**
       **이름이 같아서일 수도** 있다 (스키마에 있는지 미확인)
 - [ ] `onBehalfOf`/`to`/`interestRateMode`를 KeeperHub의 `aave-v3/*` 액션이 그 형태로 받는지.
       Aave 문서로 "무엇이 필요한지"는 확정했지만 **KeeperHub가 그 키를 그대로 받는지는 미검증**
-- [ ] `toTxResult`가 읽는 `body.transactionLink` — **protocol action 응답에 이 필드가 있는지 모른다**
-- [ ] `body.success` 기반 성공 판정 — 8/9에 관측한 에러 응답 하나에서 역추론한 규칙
+- [x] ✅ `execute_protocol_action` 응답 봉투 확인(8/11) — `{success, result:{...}}`. 페이로드가 `result`에
+      중첩된다는 걸 몰라 `toTxResult`가 링크를 놓칠 뻔했다. 양쪽을 다 보도록 수정 완료
+- [x] ✅ `body.success` 기반 성공 판정 — 읽기 액션 응답에서 규칙이 맞는 것 확인(8/11)
+- [ ] 쓰기 액션 응답의 `transactionLink` 위치 — 워크플로우 경로는 `output.transactionLink`로 평평하게 온다.
+      직접 실행 경로는 **Aave 실행이 성공해야 확정**된다
 - [ ] `LOCK_POSITION → aave-v3/withdraw` "전액 인출로 흉내"는 **우리가 지어낸 의미 부여**.
       `amount`(= uint256 max) 기본값도 없어 **지금 상태로는 호출 자체가 안 된다**
 - [ ] `analyzer.ts`의 base currency 8자리 / HF 18자리 소수 가정. Aave Pool 문서에 자릿수 명시가 없다.
