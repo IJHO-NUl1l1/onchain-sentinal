@@ -15,6 +15,23 @@ export type ActionType =
   | "LOCK_POSITION"
   | "ACCELERATE_ORACLE";
 
+const ACTION_TYPES: readonly ActionType[] = [
+  "NO_ACTION",
+  "INCREASE_MONITORING",
+  "SUPPLY_COLLATERAL",
+  "WITHDRAW_COLLATERAL",
+  "REPAY_DEBT",
+  "LOCK_POSITION",
+  "ACCELERATE_ORACLE",
+];
+
+// 단일 진실 공급원 — enum 밖 값을 걸러내는 모든 지점(데모 스크립트, 콘솔 UI)이
+// 이 함수를 써야 한다. 각자 따로 목록을 베끼면 하나가 바뀔 때 나머지가 안 바뀌는
+// 사고가 난다(8/11 발견: 콘솔 UI가 이 검증을 아예 안 하고 있었다).
+export function isActionType(value: string): value is ActionType {
+  return (ACTION_TYPES as readonly string[]).includes(value);
+}
+
 export interface Action {
   type: ActionType;
   params: Record<string, unknown>;

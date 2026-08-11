@@ -6,20 +6,22 @@
 // 링크)를 노출하지만 기본은 접어둔다 — 필요할 때만 펼쳐 보는 것.
 // 각 단계는 실제로 순차 호출된다. 화면에 뜨는 순서 = 실행 순서(연출 아님).
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   stepAnalyze,
+  stepBuildPrompt,
   stepExecute,
+  stepParseVerdict,
   stepProvision,
   stepVerify,
   type AaveSnapshot,
 } from "../_actions/run-steps";
 import type { ActionType, MonitoringProfile } from "../../executors/types";
+import type { Verdict } from "../../agent/prompt";
 
 // Base 메인넷 확정값 (architecture.md §8-2 — 온체인 조회로 확인)
 const BASE_USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 const BASE_WETH = "0x4200000000000000000000000000000000000006";
-const POLICY_THRESHOLD = "2.5";
 
 type Status = "idle" | "running" | "success" | "error" | "waiting";
 
@@ -198,14 +200,12 @@ export function RunConsole() {
     rows?: Row[];
   }>({ status: "idle" });
 
+  const [agentPrompt, setAgentPrompt] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const [verdictText, setVerdictText] = useState("");
-  const [verdict, setVerdict] = useState<{
-    severity?: string;
-    diagnosis?: string;
-    action?: ActionType;
-    rationale?: string;
-  } | null>(null);
+  const [verdict, setVerdict] = useState<Verdict | null>(null);
   const [verdictErr, setVerdictErr] = useState<string | null>(null);
+  const [verdictLoading, setVerdictLoading] = useState(false);
 
   const [asset, setAsset] = useState(BASE_WETH);
   const [amount, setAmount] = useState("");
@@ -218,6 +218,19 @@ export function RunConsole() {
   });
   const [after, setAfter] = useState<AaveSnapshot | null>(null);
 
+  // 2막 성공하면 바로 3막용 프롬프트를 조립해둔다 — 사람이 손으로 조립하는 게 아니라
+  // 코드가 실제 데이터로 완성한 문자열이다 (agent/prompt.ts).
+  useEffect(() => {
+    if (provision.status !== "success" || !profile || !snapshot) return;
+    let cancelled = false;
+    stepBuildPrompt(profile, snapshot).then((p) => {
+      if (!cancelled) setAgentPrompt(p);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [provision.status, profile, snapshot]);
+
   async function runAnalyze() {
     const target = address.trim();
     if (!target) return;
@@ -226,8 +239,10 @@ export function RunConsole() {
     setSnapshot(null);
     setProfile(null);
     setProvision({ status: "idle" });
+    setAgentPrompt(null);
     setVerdict(null);
     setVerdictText("");
+    setVerdictErr(null);
     setExec({ status: "idle" });
     setVerify({ status: "idle" });
     setAfter(null);
@@ -281,20 +296,29 @@ export function RunConsole() {
     });
   }
 
-  function applyVerdict() {
+  async function copyPrompt() {
+    if (!agentPrompt) return;
+    await navigator.clipboard.writeText(agentPrompt);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+
+  async function applyVerdict() {
     setVerdictErr(null);
-    try {
-      const parsed = JSON.parse(verdictText);
-      setVerdict(parsed);
-    } catch (e) {
-      setVerdictErr(e instanceof Error ? e.message : "Invalid JSON");
+    setVerdictLoading(true);
+    const result = await stepParseVerdict(verdictText);
+    setVerdictLoading(false);
+    if (!result.ok) {
+      setVerdictErr(result.error);
+      return;
     }
+    setVerdict(result.verdict);
   }
 
   async function runExecute() {
     if (!verdict?.action) return;
     setExec({ status: "running" });
-    const r = await stepExecute(verdict.action, { asset, amount });
+    const r = await stepExecute(verdict.action as ActionType, { asset, amount });
     if (!r.ok || !r.data) {
       setExec({ status: "error", ms: r.durationMs, err: r.error });
       return;
@@ -344,19 +368,6 @@ export function RunConsole() {
     setAfter(v.data);
     setVerify({ status: "success", ms: v.durationMs, raw: v.data });
   }
-
-  const handoff = snapshot
-    ? JSON.stringify(
-        {
-          wallet: address.trim(),
-          chain: "base-mainnet (8453)",
-          policyThreshold: POLICY_THRESHOLD,
-          aave: snapshot,
-        },
-        null,
-        2,
-      )
-    : "";
 
   return (
     <div className="flex flex-col gap-4">
@@ -424,29 +435,29 @@ export function RunConsole() {
         <Step
           index={3}
           title="Agent reads it and decides"
-          subtitle="The numbers above go to Claude. It may answer with only one of seven predefined actions — it cannot invent a new one."
+          subtitle="Claude may answer with only one of seven predefined actions — it cannot invent a new one. Manually relayed below; everything around this call is what an API integration would run unchanged."
           status={verdict ? "success" : "waiting"}
           rows={
             verdict
               ? [
                   {
                     label: "Severity",
-                    value: String(verdict.severity ?? "-"),
+                    value: verdict.severity,
                     strong: true,
                     hint: "How urgent the agent judged this position to be.",
                   },
                   {
                     label: "Diagnosis",
-                    value: String(verdict.diagnosis ?? "-"),
+                    value: verdict.diagnosis,
                     hint: "Its reading of the state, in its own words.",
                   },
                   {
                     label: "Action",
-                    value: String(verdict.action ?? "-"),
+                    value: verdict.action,
                     strong: true,
-                    hint: "Picked from the fixed enum. This is what step 4 will execute.",
+                    hint: "Validated against the fixed enum before being accepted. This is what step 4 will execute.",
                   },
-                  { label: "Rationale", value: String(verdict.rationale ?? "-"), hint: "Why it chose that." },
+                  { label: "Rationale", value: verdict.rationale, hint: "Why it chose that." },
                 ]
               : undefined
           }
@@ -454,9 +465,33 @@ export function RunConsole() {
           {!verdict && (
             <div className="mt-4">
               <p className="text-xs text-zinc-500">
-                This exact payload goes to the agent. Paste its JSON verdict back below.
+                Prompt assembly (left) and verdict validation (right) are both real code —{" "}
+                <code className="text-zinc-400">agent/prompt.ts</code>. The only manual step is the
+                middle: sending this exact string to Claude and pasting back what it says. Wiring an
+                API key in place of that copy-paste is the entire difference between this demo and a
+                fully automated version — nothing else in the pipeline would change.
               </p>
-              <RawToggle value={handoff} label="Payload handed to the agent" />
+
+              <div className="mt-3 rounded border border-zinc-800 bg-zinc-950">
+                <div className="flex items-center justify-between border-b border-zinc-800 px-3 py-1.5">
+                  <span className="font-mono text-[10px] uppercase tracking-wider text-zinc-600">
+                    Prompt to send to the agent
+                  </span>
+                  <button
+                    type="button"
+                    onClick={copyPrompt}
+                    disabled={!agentPrompt}
+                    className="rounded border border-zinc-700 px-2 py-0.5 font-mono text-[10px] text-zinc-400 hover:border-zinc-500 hover:text-zinc-200 disabled:opacity-40"
+                  >
+                    {copied ? "Copied" : "Copy"}
+                  </button>
+                </div>
+                <pre className="max-h-72 overflow-auto p-3 font-mono text-[11px] leading-relaxed text-zinc-400">
+                  {agentPrompt ?? "Assembling…"}
+                </pre>
+              </div>
+
+              <p className="mt-3 text-xs text-zinc-500">Paste the agent&apos;s JSON verdict back here.</p>
               <textarea
                 value={verdictText}
                 onChange={(e) => setVerdictText(e.target.value)}
@@ -464,12 +499,17 @@ export function RunConsole() {
                 placeholder={'{"severity":"high","diagnosis":"...","action":"REPAY_DEBT","rationale":"..."}'}
                 className="mt-2 w-full rounded border border-zinc-800 bg-zinc-950 p-3 font-mono text-[11px] text-zinc-300 outline-none focus:border-sky-500/50"
               />
-              {verdictErr && <p className="mt-1 font-mono text-[11px] text-red-400">{verdictErr}</p>}
+              {verdictErr && (
+                <p className="mt-1 font-mono text-[11px] text-red-400">
+                  Rejected — {verdictErr}
+                </p>
+              )}
               <button
                 onClick={applyVerdict}
-                className="mt-2 rounded-md border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:border-zinc-500"
+                disabled={verdictLoading || !verdictText.trim()}
+                className="mt-2 rounded-md border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:border-zinc-500 disabled:opacity-40"
               >
-                Load verdict
+                {verdictLoading ? "Validating…" : "Load verdict"}
               </button>
             </div>
           )}

@@ -7,6 +7,7 @@
 
 import { formatUnits } from "viem";
 import { analyzeWallet, getAaveAccountData } from "../../agent/analyzer";
+import { buildAgentPrompt, parseVerdict, type Verdict } from "../../agent/prompt";
 import { KeeperHubExecutor } from "../../executors/keeperhub";
 import type { Action, ActionType, MonitoringProfile } from "../../executors/types";
 
@@ -85,6 +86,28 @@ export async function stepProvision(profile: MonitoringProfile) {
     const executor = new KeeperHubExecutor();
     return executor.provisionMonitoring(profile);
   });
+}
+
+/**
+ * 3막 — 실제 데이터로 완성된 프롬프트를 조립한다. 사람이 이 문자열을 그대로 복사해
+ * Claude에 붙여넣는다 — 조립은 코드가 했으니, 사람이 하는 일은 "이걸 API로 보내는 것"
+ * 하나로 줄어든다 (agent/prompt.ts 상단 주석 참조).
+ */
+export async function stepBuildPrompt(
+  profile: MonitoringProfile,
+  snapshot: AaveSnapshot,
+): Promise<string> {
+  return buildAgentPrompt(profile, JSON.stringify(snapshot, null, 2));
+}
+
+/**
+ * 3막 — Claude가 낸 응답을 검증한다. `action`이 enum 밖이면 여기서 거부된다 —
+ * "LLM 출력을 enum으로 제한한다"는 원칙이 프롬프트의 부탁이 아니라 코드로 강제되는 지점.
+ */
+export async function stepParseVerdict(
+  raw: string,
+): Promise<{ ok: true; verdict: Verdict } | { ok: false; error: string }> {
+  return parseVerdict(raw);
 }
 
 /** 3막 — 에이전트가 고른 액션을 온체인에서 실행한다 (§0-1 2번 축의 종착점) */

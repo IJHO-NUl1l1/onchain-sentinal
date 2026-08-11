@@ -8,20 +8,7 @@
 // 예:     npm run demo:execute -- SUPPLY_COLLATERAL '{"asset":"0x...","amount":"1","onBehalfOf":"0x2b33afb068a77b103fFAF0b7d9F128209076BcE3"}'
 
 import { KeeperHubExecutor } from "../executors/keeperhub";
-import type { Action, ActionType } from "../executors/types";
-
-function isKnownActionType(value: string): value is ActionType {
-  const known: ActionType[] = [
-    "NO_ACTION",
-    "INCREASE_MONITORING",
-    "SUPPLY_COLLATERAL",
-    "WITHDRAW_COLLATERAL",
-    "REPAY_DEBT",
-    "LOCK_POSITION",
-    "ACCELERATE_ORACLE",
-  ];
-  return (known as string[]).includes(value);
-}
+import { isActionType, type Action } from "../executors/types";
 
 async function main() {
   const [actionType, paramsJson] = process.argv.slice(2);
@@ -31,7 +18,7 @@ async function main() {
     );
     process.exit(1);
   }
-  if (!isKnownActionType(actionType)) {
+  if (!isActionType(actionType)) {
     console.error(`Unknown action: "${actionType}" — not in the table in architecture.md §10`);
     process.exit(1);
   }

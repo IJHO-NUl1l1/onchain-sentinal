@@ -7,6 +7,12 @@ import type { Action } from "../executors/types";
 // 1차 초안. 프롬프트 실제 작성하면서 조정 가능 — 확정 스펙이 아님.
 export type Severity = "low" | "medium" | "high" | "critical";
 
+const SEVERITIES: readonly Severity[] = ["low", "medium", "high", "critical"];
+
+export function isSeverity(value: string): value is Severity {
+  return (SEVERITIES as readonly string[]).includes(value);
+}
+
 export interface Diagnosis {
   severity: Severity;
   diagnosis: string;
