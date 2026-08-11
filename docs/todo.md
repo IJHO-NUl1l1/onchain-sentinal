@@ -20,12 +20,24 @@
 **8/9 기준: Phase A·B 완료, Phase C·D 동시 진행중.** 원안 대비 있었던 3~4일 지연(8/6 시점)은 Phase B를
 8/7-8/9로 압축해 흡수했다 — 개정 일정은 architecture.md 8장 참조.
 
-**⏰ 8/10 08:50 현재 — KeeperHub 마감까지 약 3일 10시간, Flare까지 약 5일.**
-기술 코어는 두 트랙 다 §0-1 두 축을 이미 실증했다. **남은 최대 리스크는 기능이 아니라 제출물이다**
-— 영상·README가 두 트랙 다 0%. 지금부터는 신규 기능보다 제출물을 먼저 끝내는 편이 안전하다.
+**⏰ 8/11(화) 11:00 현재 — KeeperHub 마감까지 약 2일 8시간, Flare까지 약 4일.**
+(마감 = 공고 UTC+2 8/13 12:00 → **KST 8/13 19:00**. "UTC"가 아니라 **UTC+2**라 21:00이 아니다.)
+기술 코어는 두 트랙 다 §0-1 두 축을 실증했다. **남은 최대 리스크는 기능이 아니라 제출물이다**
+— 영상·README가 두 트랙 다 0%.
 
-**▶ 다음 작업 순서 (8/10 개정 — 근거·상세는 architecture.md §8-1, §8-2):**
-1. `FlareExecutor` 구현 + `register-wallet.ts` executor 선택 배선 ← **KeeperHub 제출 전에 끝낼 것**
+**✅ 8/11: Base 메인넷 첫 트랜잭션 성공 — 자금 0원으로.**
+`0x3e6718070bf85cc386e311d04c530ecccc21efe8695f454fc2bcc4206864e5c6`
+approve는 자산을 안 움직이고 `web3/*`라 가스가 대납돼 **빈 지갑으로도** 실행됐다.
+→ 공고 제출 요건 *"a transaction your agent executed via KeeperHub"*는 **이미 충족된 상태**다.
+   Aave 자금이 끝내 안 와도 제출 자체는 성립한다.
+
+**▶ 다음 작업 순서 (8/11 개정 — 근거·상세는 architecture.md §8-1, §8-2):**
+0. **Base 자금 확보 ← 임계경로.** 필요한 건 두 가지뿐:
+   - **USDC 30~50달러어치** (담보용)
+   - **네이티브 ETH 먼지** — `aave-v3/*`는 스폰서십 대상이 아니라서 필요. 다만 **0.000000231 ETH**면
+     충분해 몇십 센트어치로 수십 건 가능. **문제는 금액이 아니라 "0이면 안 된다"는 것**
+   - ⚠️ 업비트는 **이더리움 메인넷/솔라나만** 지원 → Base로 못 보낸다. 해외 거래소 경유 또는 온램프 필요
+1. `FlareExecutor` 구현 + executor 선택 배선 ← **KeeperHub 제출 전에 끝낼 것**
    (제출 브랜치를 동결하면 그 코드가 8/20까지 심사 대상이라, 스텁이면 영원히 스텁으로 남는다)
 2. README 공통 골격 + 🔵 KeeperHub 버전 → 데모 영상 → `submission/keeperhub` 동결 → **조기 제출**
 3. 🟠 Flare README + 영상 (+여유 시 `offerIncentive`) → `submission/flare` 동결 → 제출
@@ -326,3 +338,40 @@
   - `FlareExecutor` 배선 (제출 브랜치 동결 전 필수)
   - README·영상 (두 트랙 다 0%, 마감까지 3일)
   - 사용자 확인 대기: 제출 폼의 브랜치 URL 허용 여부 / 가스 크레딧 잔여 / 업비트 Base 출금 지원
+- 8/11 기기1: 자금 없이 가능한 검증을 전부 소진 + 대시보드를 발표용으로 재작성. **다른 기기로 넘기는 시점.**
+
+  **① Base 메인넷 첫 tx 성공 (자금 0원).** `web3/approve-token`(USDC → Aave Pool)을 워크플로우로 실행 →
+  `0x3e6718070bf85cc386e311d04c530ecccc21efe8695f454fc2bcc4206864e5c6`. 이걸로 §8-2 미검증 C가 통째로 해소:
+  tx 링크 위치 / audit trail 형태(`get_execution`이 `verified:true`+`receiptStatus` 포함) /
+  스폰서 tx 형태(top-level to = 릴레이어) / **실측 가스 $0.003** 확인.
+  **이 approve는 프로브가 아니라 실제 셋업 1단계이기도 하다** — USDC 담보 공급의 선행 조건.
+
+  **② 새 함정 4개** (전부 architecture.md §3 함정 11~15에 기록):
+  `web3/*`는 직접 실행 불가(501, 워크플로우 필수) / `execute_workflow`는 결과가 아니라 running만 반환 /
+  **금액 단위가 계열마다 반대**(`web3/*`=사람이 읽는 값, `aave-v3/*`=uint256 base unit) /
+  **스폰서십이 액션 종류로 갈린다**(`web3/*` 대납, `aave-v3/*` 미대납 → 먼지 ETH 필요) /
+  `create_workflow`는 설정을 검증해주지만 직접 실행은 안 해준다(불확실하면 워크플로우로 먼저 검증)
+
+  **③ 코드 수정**: `toTxResult`가 `result` 중첩까지 보도록(응답 봉투 `{success, result:{...}}` 확인 결과) /
+  `provisionMonitoring` 반환을 `void` → `ProvisionResult`(참조·라벨·링크·원본)로 확장 /
+  `check-base-reserve.ts`의 BigInt 리터럴이 `tsc`·`next build`를 깨뜨리던 것 수정(내가 낸 버그였음)
+
+  **④ 대시보드를 5막 실행 콘솔로 재작성** (`_components/run-console.tsx`, `_actions/run-steps.ts`).
+  단계마다 상태·소요시간·값+한 줄 설명·원본 JSON·익스플로러 링크 노출. 실제 순차 호출이라 화면 순서=실행 순서.
+  **목업 로그 테이블은 번역 대신 삭제** — 지어낸 로그가 진짜 tx 옆에 있는 게 §8-1 정직성 위험이었다.
+  `guard-panel.tsx`/`register-wallet.ts`는 콘솔에 흡수돼 제거.
+
+  **시나리오 대비 현황 (§8-2 기준):**
+  - 1막 배치 — ✅ 코드 완성. ⚠️ **체인 ID를 8453으로 바꾼 뒤 `provisionMonitoring`을 안 돌려봤다.**
+    8/9에 만든 워크플로우들은 `network: 11155111`(Sepolia)로 박혀 있다. 다음 기기에서 한 번 돌려 확인할 것
+  - 2막 진단 — ⚠️ 파이프라인은 돌지만 **위험한 포지션에서 한 번도 안 돌려봤다**(§8-2 F)
+  - 3막 실행 — ❌ **Aave 쓰기가 한 번도 성공한 적 없다.** 자금이 오면 풀린다. 심사 최고 가중치 항목
+  - 4막 검증 — ✅ 스폰서 tx 형태 실증 완료
+  - 5막 관측 — ✅ `get_execution` 화면 확보. **단 콘솔이 아니라 KeeperHub 대시보드에서 찍어야 한다**
+
+  **다음 기기가 할 일 (순서대로):**
+  - `app/.env`에 `KEEPERHUB_EXECUTOR_ADDRESS=0x2b33afb068a77b103fFAF0b7d9F128209076BcE3` 추가
+    (없으면 `execute()`가 즉시 실패한다) + `KEEPERHUB_DEV_CHAIN_ID=8453`
+  - Base 자금(USDC + 먼지 ETH) 경로 해결 ← 임계경로
+  - `FlareExecutor` 배선 (제출 브랜치 동결 전 필수)
+  - README·영상
