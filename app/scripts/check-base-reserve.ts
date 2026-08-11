@@ -31,7 +31,8 @@ const client = createPublicClient({ chain: base, transport: http() });
 // 비트 구간 추출 헬퍼 (하위 lo비트부터 hi비트까지, 양끝 포함)
 function bits(v: bigint, lo: number, hi: number): bigint {
   const width = BigInt(hi - lo + 1);
-  return (v >> BigInt(lo)) & ((1n << width) - 1n);
+  const one = BigInt(1);
+  return (v >> BigInt(lo)) & ((one << width) - one);
 }
 
 // 공용 RPC가 연속 호출에 레이트 리밋을 건다 — 순차 호출 + 백오프 재시도.
@@ -87,12 +88,12 @@ async function main() {
     console.log("LTV               :", Number(bits(cfg, 0, 15)) / 100, "%");
     console.log("liq. threshold    :", Number(bits(cfg, 16, 31)) / 100, "%");
     console.log("liq. bonus        :", Number(bits(cfg, 32, 47)) / 100, "%");
-    console.log("active            :", bits(cfg, 56, 56) === 1n);
-    console.log("frozen            :", bits(cfg, 57, 57) === 1n);
-    console.log("borrowing enabled :", bits(cfg, 58, 58) === 1n);
-    console.log("paused            :", bits(cfg, 60, 60) === 1n);
-    console.log("borrowable in iso :", bits(cfg, 61, 61) === 1n);
-    console.log("siloed borrowing  :", bits(cfg, 62, 62) === 1n);
+    console.log("active            :", bits(cfg, 56, 56) === BigInt(1));
+    console.log("frozen            :", bits(cfg, 57, 57) === BigInt(1));
+    console.log("borrowing enabled :", bits(cfg, 58, 58) === BigInt(1));
+    console.log("paused            :", bits(cfg, 60, 60) === BigInt(1));
+    console.log("borrowable in iso :", bits(cfg, 61, 61) === BigInt(1));
+    console.log("siloed borrowing  :", bits(cfg, 62, 62) === BigInt(1));
     console.log("borrow cap        :", bits(cfg, 80, 115).toString());
     console.log("supply cap        :", bits(cfg, 116, 151).toString());
     console.log("debt ceiling(iso) :", bits(cfg, 212, 251).toString());

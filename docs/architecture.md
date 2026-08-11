@@ -257,6 +257,24 @@ Aave v4는 대안이 아니다 — Ethereum 메인넷만 지원(L2 없음), 그�
     직접 실행 대상이다. (8/9에 팀이 approve를 워크플로우로 만든 이유가 이것)
 12. `execute_workflow`는 **`{executionId, status:"running"}`만 돌려준다** — 결과가 아니다.
     반드시 `get_execution(executionId)`으로 폴링해야 실제 성공/tx 해시를 안다
+13. **금액 단위가 액션 계열마다 반대다** (8/11 실증):
+    - `web3/*` → **사람이 읽는 값**. `"100.50"` 또는 `"max"`
+    - `aave-v3/*` → **uint256 base unit**. `"0.1"`을 넣으면 422 `INVALID_FIELD_TYPE (expected uint256)`.
+      USDC 0.1개 = `"100000"`(6자리), WETH 0.1개 = `"100000000000000000"`(18자리)
+14. ⚠️ **가스 스폰서십은 액션 종류로 갈린다** (8/11 실증, 직접실행·워크플로우 양쪽 확인):
+    - `web3/approve-token` → `sponsored: true`, **잔고 0에서도 성공**
+    - `aave-v3/supply` → 스폰서 안 됨. `Insufficient BASE balance. Have: 0.0, Need: 0.000000231`
+    → **Aave 액션을 쓰려면 실행 지갑에 네이티브 ETH가 있어야 한다.** 다만 필요량이 **0.000000231 ETH**로
+      먼지 수준이라 몇십 센트어치면 수십 건을 감당한다
+15. **`create_workflow`는 액션 설정을 검증해준다** (422 + `invalidFields`에 필드·기대타입까지).
+    `execute_protocol_action`은 검증 없이 바로 나간다 → **파라미터가 불확실하면 워크플로우로 먼저 만들어 검증**하는 게 싸다
+
+**`execute_protocol_action` 응답 봉투 (8/11 실증, 읽기 액션 기준):**
+```
+{ "success": true, "result": { ...실제 반환값... }, "addressLink": "https://basescan.org/address/..." }
+```
+⚠️ 페이로드가 **`result` 아래에 중첩**된다. 쓰기 액션의 `transactionLink`도 `result` 안일 가능성이 높다
+(워크플로우 경로는 `output.transactionLink`로 평평하게 온다). `toTxResult`는 양쪽을 다 보게 해둘 것.
 11. `execute_protocol_action`의 응답은 MCP `isError`가 아니라 **`content[0].text` 안의 JSON `{success, error}`로 실패를 알려준다** — `isError`만 보면 실패를 성공으로 오인함(8/9 실증, app/executors/keeperhub.ts의 `toTxResult` 참조)
 12. `web3/approve-token`은 **`execute_protocol_action`(직접 실행)을 지원 안 함** — "Direct execution not supported... Use workflow execution instead" 에러. 워크플로우로 만들어서 `execute_workflow`로 실행해야 함
 13. `aave-v3/supply`는 `referralCode`가 스키마상 optional인데 **실제로는 없으면 거부됨**("referralCode: uint16 is missing"). `"0"` 기본값 필요

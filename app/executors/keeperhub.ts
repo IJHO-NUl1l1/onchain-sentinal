@@ -75,13 +75,27 @@ function parseBody(result: CallToolReturn): Record<string, unknown> | undefined 
   return undefined;
 }
 
+// ⚠️ 8/11 실증: `execute_protocol_action`은 페이로드를 `result` 아래에 중첩해 돌려준다
+// (`{success, result:{...}, addressLink}`). 워크플로우 실행 경로(`get_execution`)는
+// `output.transactionLink`로 평평하게 준다. 어느 쪽이 와도 찾도록 두 군데를 다 본다.
+function pickTransactionLink(body: Record<string, unknown> | undefined): string | undefined {
+  if (!body) return undefined;
+  if (typeof body.transactionLink === "string") return body.transactionLink;
+  const nested = body.result;
+  if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+    const link = (nested as Record<string, unknown>).transactionLink;
+    if (typeof link === "string") return link;
+  }
+  return undefined;
+}
+
 function toTxResult(result: CallToolReturn): TxResult {
   const body = parseBody(result);
   // 본문을 못 읽으면 성공을 확인할 수 없으므로 실패로 본다. 방어 시스템에서
   // "실패를 성공으로 보고하는 것"이 가장 나쁜 실패 모드다 (8/10).
   const success =
     result.isError !== true && body !== undefined && (body.success === undefined || body.success === true);
-  const transactionLink = typeof body?.transactionLink === "string" ? body.transactionLink : undefined;
+  const transactionLink = pickTransactionLink(body);
 
   return {
     success,
