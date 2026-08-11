@@ -375,3 +375,21 @@ approve는 자산을 안 움직이고 `web3/*`라 가스가 대납돼 **빈 지�
   - Base 자금(USDC + 먼지 ETH) 경로 해결 ← 임계경로
   - `FlareExecutor` 배선 (제출 브랜치 동결 전 필수)
   - README·영상
+- 8/11 기기2 (세션 이어받음): 콘솔 UI를 발표 방식으로 재구성 + "이게 진짜 agent냐" 질문에서
+  나온 실제 구멍 두 개를 메움.
+  ①`run-console.tsx`를 1막→2막 자동 연쇄에서 **막마다 버튼으로 진행**하는 구조로 변경 —
+  다음 막은 이전 막이 성공해야 화면에 나타남(`step-enter` 슬라이드 애니메이션). 원본 JSON은
+  기본 접힘, 토글로 펼침(`collapsible-grid`).
+  ②"프롬프트 없이 데이터만 주면 agent라 부를 수 있나?" 논의 끝에 `app/agent/prompt.ts` 신설 —
+  `diagnoser.md`+`strategist.md`를 코드로 읽어 실데이터와 합친 **완성된 프롬프트 문자열**을
+  조립하고(콘솔에 그대로 노출, 복사 버튼 포함), Claude가 낸 응답을 `parseVerdict()`가
+  `action`을 `isActionType()`으로 검증해서 enum 밖이면 거부. **이전엔 이 검증이 콘솔에
+  아예 없었다** — `demo-execute.ts`엔 있었는데 콘솔의 수동 입력 경로엔 빠져있던 걸 발견해서
+  통일(`isActionType`을 `executors/types.ts`에 단일 소스로 옮김).
+  ③`diagnoser.md`/`strategist.md`를 영어로 번역 — 이제 콘솔에 그대로 노출되니 CLAUDE.md
+  "노출되는 건 전부 영어" 규칙 적용 대상이 됨.
+  ④"API 키만 연결하면 동일하게 동작한다"를 UI 문구로 명시(3막 서브타이틀 + 본문) — 조립·검증은
+  코드, 사람이 하는 유일한 일은 "이 문자열을 Claude에 보내고 답을 붙여넣는 것"뿐이라고 못박음.
+  ⑤부수적으로 Turbopack 워크스페이스 루트 오판 버그 발견·수정(`next.config.ts`에 `turbopack.root`
+  명시) — 루트에 있던 빈 `package-lock.json`을 정리하다 드러남.
+  다음 = Base 자금 경로(임계경로) / `FlareExecutor` 배선 / README·영상 — 전부 미해결로 남음.
