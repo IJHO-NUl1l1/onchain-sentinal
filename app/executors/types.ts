@@ -33,9 +33,26 @@ export interface TxResult {
   raw?: unknown;
 }
 
+/**
+ * 감시망 설치 결과. executor마다 "설치됐다"의 증거가 다르다 —
+ * KeeperHub는 워크플로우 id, Flare는 setPolicy 트랜잭션 해시.
+ * 어느 쪽이든 사람이 확인할 수 있는 참조 하나 + 원본 응답을 돌려준다.
+ * (데모 콘솔이 중간 과정을 날것으로 보여주려면 이 정보가 필요하다)
+ */
+export interface ProvisionResult {
+  /** 사람이 식별하는 참조 — 워크플로우 id / tx 해시 */
+  reference?: string;
+  /** 사람이 읽는 이름 — 워크플로우 이름 등 */
+  label?: string;
+  /** 외부에서 확인 가능한 링크 (대시보드 / 익스플로러) */
+  link?: string;
+  /** 원본 응답 그대로 */
+  raw?: unknown;
+}
+
 export interface Executor {
   /** 감시망 설치. KeeperHub → create_workflow / Flare → setPolicy() */
-  provisionMonitoring(profile: MonitoringProfile): Promise<void>;
+  provisionMonitoring(profile: MonitoringProfile): Promise<ProvisionResult>;
   /** 대응 실행. KeeperHub → execute_check_and_execute 등 / Flare → agentRespond() */
   execute(action: Action): Promise<TxResult>;
 }

@@ -10,7 +10,14 @@
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import type { Action, ActionType, Executor, MonitoringProfile, TxResult } from "./types";
+import type {
+  Action,
+  ActionType,
+  Executor,
+  MonitoringProfile,
+  ProvisionResult,
+  TxResult,
+} from "./types";
 
 // callTool()의 반환 타입을 SDK의 Client 클래스에서 그대로 뽑아 쓴다 — 버전마다
 // CallToolResult 유니온이 조금씩 달라서 직접 import한 타입과 어긋날 수 있기 때문.
@@ -105,7 +112,7 @@ function toTxResult(result: CallToolReturn): TxResult {
 }
 
 export class KeeperHubExecutor implements Executor {
-  async provisionMonitoring(profile: MonitoringProfile): Promise<void> {
+  async provisionMonitoring(profile: MonitoringProfile): Promise<ProvisionResult> {
     const client = await connect();
     try {
       const nodes = [
@@ -149,7 +156,7 @@ export class KeeperHubExecutor implements Executor {
       ];
       const edges = [{ id: "e-trigger-1-step-1", source: "trigger-1", target: "step-1" }];
 
-      await client.callTool({
+      const created = await client.callTool({
         name: "create_workflow",
         arguments: {
           name: `sentinel-${profile.walletAddress}`,
@@ -160,6 +167,15 @@ export class KeeperHubExecutor implements Executor {
           idempotency_key: `provision-${profile.walletAddress}`,
         },
       });
+
+      const body = parseBody(created);
+      const workflowId = typeof body?.id === "string" ? body.id : undefined;
+      return {
+        reference: workflowId,
+        label: typeof body?.name === "string" ? body.name : undefined,
+        link: workflowId ? `https://app.keeperhub.com/workflows/${workflowId}` : undefined,
+        raw: body ?? created,
+      };
     } finally {
       await client.close();
     }

@@ -2,13 +2,16 @@
 // 이 파일 밖(agent/, app/app/ 라우트)에는 Flare 관련 분기를 두지 않는다.
 //
 // ethers로 SentinelVault.sol(Coston2, chainId 114) 트랜잭션을 보낸다.
-// 컨트랙트 자체(SentinelVault.sol)가 아직 없어 ABI/주소가 확정되지 않았다 —
-// contracts/ 배포 완료(Phase D) 후 SENTINEL_VAULT_ADDRESS를 .env에서 읽어 연결한다.
+// 컨트랙트는 8/9에 Coston2 배포 완료(0xBf5778109e894b7C093D91B8a7518c95Fe74c3EF, architecture.md §3).
+// 지금은 `contracts/scripts/demo-provision-and-check.ts`가 컨트랙트를 직접 호출하고 있어
+// 이 executor를 안 거친다 — CLAUDE.md "Executor 경계" 위반 상태다. setPolicy/agentRespond를
+// 여기로 옮기는 게 남은 작업(todo.md Phase D 최우선).
+// ⚠️ checkAndExecute는 가스 자동견적이 불안정하니 명시적 gasLimit 필수(§3).
 
-import type { Action, Executor, MonitoringProfile, TxResult } from "./types";
+import type { Action, Executor, MonitoringProfile, ProvisionResult, TxResult } from "./types";
 
 export class FlareExecutor implements Executor {
-  async provisionMonitoring(_profile: MonitoringProfile): Promise<void> {
+  async provisionMonitoring(_profile: MonitoringProfile): Promise<ProvisionResult> {
     // TODO(Phase D): SentinelVault.setPolicy() 호출. 컨트랙트 배포 후 구현.
     throw new Error("FlareExecutor.provisionMonitoring: not implemented (Phase D)");
   }
