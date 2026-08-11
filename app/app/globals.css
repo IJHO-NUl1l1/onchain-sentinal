@@ -24,3 +24,31 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* run-console.tsx: 새 막이 나타날 때 (프레젠테이션처럼 한 단계씩 등장) */
+@keyframes step-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.step-enter {
+  animation: step-in 320ms ease-out;
+}
+
+/* run-console.tsx: raw JSON 토글 슬라이드 (grid-template-rows 트릭 — height:auto도 애니메이션됨) */
+.collapsible-grid {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 220ms ease;
+}
+.collapsible-grid.is-open {
+  grid-template-rows: 1fr;
+}
+.collapsible-grid > div {
+  overflow: hidden;
+}

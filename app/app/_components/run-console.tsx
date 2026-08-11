@@ -1,8 +1,9 @@
 "use client";
 
 // 데모용 실행 콘솔. architecture.md §8-2의 5막을 화면 위에 순서대로 펼친다.
-// 일반 제품 UI보다 훨씬 많은 날것의 정보(원본 응답, tx 해시, 가스, 링크)를 일부러 노출한다 —
-// 영상에서 "중간 과정이 실제로 성공했다"가 눈으로 보여야 하기 때문.
+// 발표 자료처럼 한 막씩 진행한다 — 다음 막은 이전 막이 끝나야 나타나고, 각자 자기 버튼으로
+// 넘어간다(자동 연쇄 없음). 일반 제품 UI보다 훨씬 많은 날것의 정보(원본 응답, tx 해시, 가스,
+// 링크)를 노출하지만 기본은 접어둔다 — 필요할 때만 펼쳐 보는 것.
 // 각 단계는 실제로 순차 호출된다. 화면에 뜨는 순서 = 실행 순서(연출 아님).
 
 import { useState } from "react";
@@ -13,7 +14,7 @@ import {
   stepVerify,
   type AaveSnapshot,
 } from "../_actions/run-steps";
-import type { ActionType } from "../../executors/types";
+import type { ActionType, MonitoringProfile } from "../../executors/types";
 
 // Base 메인넷 확정값 (architecture.md §8-2 — 온체인 조회로 확인)
 const BASE_USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
@@ -39,14 +40,27 @@ const STATUS_STYLE: Record<Status, { chip: string; text: string; bar: string }> 
   waiting: { chip: "border-sky-500/40 text-sky-400", text: "AWAITING AGENT", bar: "bg-sky-500" },
 };
 
-function Raw({ value, label }: { value: unknown; label: string }) {
+/** 원본 응답 JSON — 기본 접힘, 클릭하면 슬라이드로 펼쳐진다. */
+function RawToggle({ value, label }: { value: unknown; label: string }) {
+  const [open, setOpen] = useState(false);
   if (value === undefined) return null;
   return (
     <div className="mt-3">
-      <p className="mb-1 font-mono text-[10px] uppercase tracking-wider text-zinc-600">{label}</p>
-      <pre className="max-h-64 overflow-auto rounded border border-zinc-800 bg-zinc-950 p-3 font-mono text-[11px] leading-relaxed text-zinc-400">
-        {typeof value === "string" ? value : JSON.stringify(value, null, 2)}
-      </pre>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-zinc-600 hover:text-zinc-400"
+      >
+        <span className={`inline-block transition-transform ${open ? "rotate-90" : ""}`}>▸</span>
+        {label}
+      </button>
+      <div className={`collapsible-grid ${open ? "is-open" : ""}`}>
+        <div>
+          <pre className="mt-2 max-h-64 overflow-auto rounded border border-zinc-800 bg-zinc-950 p-3 font-mono text-[11px] leading-relaxed text-zinc-400">
+            {typeof value === "string" ? value : JSON.stringify(value, null, 2)}
+          </pre>
+        </div>
+      </div>
     </div>
   );
 }
@@ -76,7 +90,7 @@ function Step({
 }) {
   const s = STATUS_STYLE[status];
   return (
-    <section className="relative rounded-lg border border-zinc-800 bg-zinc-950/40 p-5">
+    <section className="step-enter relative rounded-lg border border-zinc-800 bg-zinc-950/40 p-5">
       <span className={`absolute left-0 top-5 h-[calc(100%-2.5rem)] w-0.5 rounded-r ${s.bar}`} />
       <div className="flex items-start justify-between gap-4 pl-3">
         <div className="min-w-0">
@@ -133,7 +147,7 @@ function Step({
           </p>
         )}
         {children}
-        <Raw value={raw} label={rawLabel ?? "Raw response"} />
+        <RawToggle value={raw} label={rawLabel ?? "Raw response"} />
       </div>
     </section>
   );
@@ -174,6 +188,7 @@ export function RunConsole() {
     status: "idle",
   });
   const [snapshot, setSnapshot] = useState<AaveSnapshot | null>(null);
+  const [profile, setProfile] = useState<MonitoringProfile | null>(null);
 
   const [provision, setProvision] = useState<{
     status: Status;
@@ -203,11 +218,13 @@ export function RunConsole() {
   });
   const [after, setAfter] = useState<AaveSnapshot | null>(null);
 
-  async function run() {
+  async function runAnalyze() {
     const target = address.trim();
     if (!target) return;
 
+    // 새로 시작 — 뒤 단계는 전부 리셋 (다시 지갑 넣고 돌리는 경우)
     setSnapshot(null);
+    setProfile(null);
     setProvision({ status: "idle" });
     setVerdict(null);
     setVerdictText("");
@@ -222,10 +239,14 @@ export function RunConsole() {
       return;
     }
     setSnapshot(a.data.snapshot);
+    setProfile(a.data.profile);
     setAnalyze({ status: "success", ms: a.durationMs, raw: a.data.snapshot });
+  }
 
+  async function runProvision() {
+    if (!profile) return;
     setProvision({ status: "running" });
-    const p = await stepProvision(a.data.profile);
+    const p = await stepProvision(profile);
     if (!p.ok || !p.data) {
       setProvision({ status: "error", ms: p.durationMs, err: p.error });
       return;
@@ -347,18 +368,20 @@ export function RunConsole() {
             onChange={(e) => setAddress(e.target.value)}
             placeholder="0x..."
             spellCheck={false}
-            className="flex-1 rounded-md border border-zinc-700 bg-transparent px-3 py-2 font-mono text-sm text-zinc-100 outline-none focus:border-emerald-500/60"
+            disabled={analyze.status === "running"}
+            className="flex-1 rounded-md border border-zinc-700 bg-transparent px-3 py-2 font-mono text-sm text-zinc-100 outline-none focus:border-emerald-500/60 disabled:opacity-50"
           />
           <button
-            onClick={run}
-            disabled={analyze.status === "running" || provision.status === "running"}
+            onClick={runAnalyze}
+            disabled={analyze.status === "running"}
             className="rounded-md bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-300 disabled:opacity-40"
           >
-            Run
+            Check wallet
           </button>
         </div>
         <p className="mt-2 text-xs text-zinc-600">
-          Reads live Aave v3 state on Base, then designs and deploys a watch through KeeperHub.
+          Step 1 only — reads live Aave v3 state on Base. Each following step runs on its own, one at a
+          time.
         </p>
       </section>
 
@@ -374,154 +397,171 @@ export function RunConsole() {
         error={analyze.err}
       />
 
-      <Step
-        index={2}
-        title="Design and deploy the watch"
-        subtitle="Sends create_workflow over KeeperHub's MCP: an hourly job that re-reads this wallet's health factor."
-        status={provision.status}
-        durationMs={provision.ms}
-        rows={provision.rows}
-        raw={provision.raw}
-        rawLabel="Raw workflow KeeperHub created"
-        error={provision.err}
-      />
-
-      <Step
-        index={3}
-        title="Agent reads it and decides"
-        subtitle="The numbers above go to Claude. It may answer with only one of seven predefined actions — it cannot invent a new one."
-        status={verdict ? "success" : snapshot ? "waiting" : "idle"}
-        rows={
-          verdict
-            ? [
-                {
-                  label: "Severity",
-                  value: String(verdict.severity ?? "-"),
-                  strong: true,
-                  hint: "How urgent the agent judged this position to be.",
-                },
-                {
-                  label: "Diagnosis",
-                  value: String(verdict.diagnosis ?? "-"),
-                  hint: "Its reading of the state, in its own words.",
-                },
-                {
-                  label: "Action",
-                  value: String(verdict.action ?? "-"),
-                  strong: true,
-                  hint: "Picked from the fixed enum. This is what step 4 will execute.",
-                },
-                { label: "Rationale", value: String(verdict.rationale ?? "-"), hint: "Why it chose that." },
-              ]
-            : undefined
-        }
-      >
-        {snapshot && !verdict && (
-          <div className="mt-4">
-            <p className="text-xs text-zinc-500">
-              This exact payload goes to the agent. Paste its JSON verdict back below.
-            </p>
-            <Raw value={handoff} label="Payload handed to the agent" />
-            <textarea
-              value={verdictText}
-              onChange={(e) => setVerdictText(e.target.value)}
-              rows={4}
-              placeholder={'{"severity":"high","diagnosis":"...","action":"REPAY_DEBT","rationale":"..."}'}
-              className="mt-2 w-full rounded border border-zinc-800 bg-zinc-950 p-3 font-mono text-[11px] text-zinc-300 outline-none focus:border-sky-500/50"
-            />
-            {verdictErr && <p className="mt-1 font-mono text-[11px] text-red-400">{verdictErr}</p>}
+      {snapshot && (
+        <Step
+          index={2}
+          title="Design and deploy the watch"
+          subtitle="Sends create_workflow over KeeperHub's MCP: an hourly job that re-reads this wallet's health factor."
+          status={provision.status}
+          durationMs={provision.ms}
+          rows={provision.rows}
+          raw={provision.raw}
+          rawLabel="Raw workflow KeeperHub created"
+          error={provision.err}
+        >
+          {provision.status === "idle" && (
             <button
-              onClick={applyVerdict}
-              className="mt-2 rounded-md border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:border-zinc-500"
+              onClick={runProvision}
+              className="mt-4 rounded-md bg-zinc-100 px-4 py-2 text-xs font-medium text-zinc-900 hover:bg-zinc-300"
             >
-              Load verdict
+              Deploy watch
             </button>
-          </div>
-        )}
-      </Step>
+          )}
+        </Step>
+      )}
 
-      <Step
-        index={4}
-        title="Execute it onchain"
-        subtitle="KeeperHub submits the transaction and Turnkey signs it inside a secure enclave. No human key, no wallet popup."
-        status={exec.status}
-        durationMs={exec.ms}
-        rows={exec.rows}
-        raw={exec.raw}
-        rawLabel="Raw response from KeeperHub"
-        error={exec.err}
-      >
-        {verdict?.action && exec.status !== "success" && (
-          <div className="mt-4 flex flex-wrap items-end gap-2">
-            <div>
-              <label className="text-[11px] text-zinc-500">Asset</label>
-              <select
-                value={asset}
-                onChange={(e) => setAsset(e.target.value)}
-                className="mt-1 block rounded border border-zinc-800 bg-zinc-950 px-2 py-1.5 font-mono text-[11px] text-zinc-300"
-              >
-                <option value={BASE_WETH}>WETH · 18 decimals</option>
-                <option value={BASE_USDC}>USDC · 6 decimals</option>
-              </select>
-            </div>
-            <div className="flex-1">
-              <label className="text-[11px] text-zinc-500">Amount (base units — not decimals)</label>
-              <input
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="100000"
-                className="mt-1 w-full rounded border border-zinc-800 bg-zinc-950 px-2 py-1.5 font-mono text-[11px] text-zinc-300 outline-none focus:border-emerald-500/50"
+      {provision.status === "success" && (
+        <Step
+          index={3}
+          title="Agent reads it and decides"
+          subtitle="The numbers above go to Claude. It may answer with only one of seven predefined actions — it cannot invent a new one."
+          status={verdict ? "success" : "waiting"}
+          rows={
+            verdict
+              ? [
+                  {
+                    label: "Severity",
+                    value: String(verdict.severity ?? "-"),
+                    strong: true,
+                    hint: "How urgent the agent judged this position to be.",
+                  },
+                  {
+                    label: "Diagnosis",
+                    value: String(verdict.diagnosis ?? "-"),
+                    hint: "Its reading of the state, in its own words.",
+                  },
+                  {
+                    label: "Action",
+                    value: String(verdict.action ?? "-"),
+                    strong: true,
+                    hint: "Picked from the fixed enum. This is what step 4 will execute.",
+                  },
+                  { label: "Rationale", value: String(verdict.rationale ?? "-"), hint: "Why it chose that." },
+                ]
+              : undefined
+          }
+        >
+          {!verdict && (
+            <div className="mt-4">
+              <p className="text-xs text-zinc-500">
+                This exact payload goes to the agent. Paste its JSON verdict back below.
+              </p>
+              <RawToggle value={handoff} label="Payload handed to the agent" />
+              <textarea
+                value={verdictText}
+                onChange={(e) => setVerdictText(e.target.value)}
+                rows={4}
+                placeholder={'{"severity":"high","diagnosis":"...","action":"REPAY_DEBT","rationale":"..."}'}
+                className="mt-2 w-full rounded border border-zinc-800 bg-zinc-950 p-3 font-mono text-[11px] text-zinc-300 outline-none focus:border-sky-500/50"
               />
+              {verdictErr && <p className="mt-1 font-mono text-[11px] text-red-400">{verdictErr}</p>}
+              <button
+                onClick={applyVerdict}
+                className="mt-2 rounded-md border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:border-zinc-500"
+              >
+                Load verdict
+              </button>
             </div>
-            <button
-              onClick={runExecute}
-              disabled={exec.status === "running"}
-              className="rounded-md bg-emerald-600 px-4 py-2 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-40"
-            >
-              Execute {verdict.action}
-            </button>
-          </div>
-        )}
-      </Step>
+          )}
+        </Step>
+      )}
 
-      <Step
-        index={5}
-        title="Confirm the state actually moved"
-        subtitle="Reads the same contract again. A defense that does not change the numbers did not happen."
-        status={verify.status}
-        durationMs={verify.ms}
-        rows={
-          after && snapshot
-            ? [
-                {
-                  label: "Health factor before",
-                  value: snapshot.healthFactor,
-                  hint: "Measured in step 1, before the agent acted.",
-                },
-                {
-                  label: "Health factor after",
-                  value: after.healthFactor,
-                  strong: true,
-                  hint: "Same call, same contract, after the transaction landed.",
-                },
-                { label: "Debt before", value: `$${snapshot.debtUsd}` },
-                { label: "Debt after", value: `$${after.debtUsd}`, hint: "Lower means the repayment settled." },
-              ]
-            : undefined
-        }
-        raw={verify.raw}
-        rawLabel="Raw values returned by Aave v3 Pool (after)"
-        error={verify.err}
-      >
-        {snapshot && verify.status !== "running" && (
-          <button
-            onClick={runVerify}
-            className="mt-4 rounded-md border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:border-zinc-500"
-          >
-            Re-read position
-          </button>
-        )}
-      </Step>
+      {verdict?.action && (
+        <Step
+          index={4}
+          title="Execute it onchain"
+          subtitle="KeeperHub submits the transaction and Turnkey signs it inside a secure enclave. No human key, no wallet popup."
+          status={exec.status}
+          durationMs={exec.ms}
+          rows={exec.rows}
+          raw={exec.raw}
+          rawLabel="Raw response from KeeperHub"
+          error={exec.err}
+        >
+          {exec.status !== "success" && (
+            <div className="mt-4 flex flex-wrap items-end gap-2">
+              <div>
+                <label className="text-[11px] text-zinc-500">Asset</label>
+                <select
+                  value={asset}
+                  onChange={(e) => setAsset(e.target.value)}
+                  className="mt-1 block rounded border border-zinc-800 bg-zinc-950 px-2 py-1.5 font-mono text-[11px] text-zinc-300"
+                >
+                  <option value={BASE_WETH}>WETH · 18 decimals</option>
+                  <option value={BASE_USDC}>USDC · 6 decimals</option>
+                </select>
+              </div>
+              <div className="flex-1">
+                <label className="text-[11px] text-zinc-500">Amount (base units — not decimals)</label>
+                <input
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="100000"
+                  className="mt-1 w-full rounded border border-zinc-800 bg-zinc-950 px-2 py-1.5 font-mono text-[11px] text-zinc-300 outline-none focus:border-emerald-500/50"
+                />
+              </div>
+              <button
+                onClick={runExecute}
+                disabled={exec.status === "running"}
+                className="rounded-md bg-emerald-600 px-4 py-2 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-40"
+              >
+                Execute {verdict.action}
+              </button>
+            </div>
+          )}
+        </Step>
+      )}
+
+      {exec.status === "success" && (
+        <Step
+          index={5}
+          title="Confirm the state actually moved"
+          subtitle="Reads the same contract again. A defense that does not change the numbers did not happen."
+          status={verify.status}
+          durationMs={verify.ms}
+          rows={
+            after && snapshot
+              ? [
+                  {
+                    label: "Health factor before",
+                    value: snapshot.healthFactor,
+                    hint: "Measured in step 1, before the agent acted.",
+                  },
+                  {
+                    label: "Health factor after",
+                    value: after.healthFactor,
+                    strong: true,
+                    hint: "Same call, same contract, after the transaction landed.",
+                  },
+                  { label: "Debt before", value: `$${snapshot.debtUsd}` },
+                  { label: "Debt after", value: `$${after.debtUsd}`, hint: "Lower means the repayment settled." },
+                ]
+              : undefined
+          }
+          raw={verify.raw}
+          rawLabel="Raw values returned by Aave v3 Pool (after)"
+          error={verify.err}
+        >
+          {verify.status !== "running" && verify.status !== "success" && (
+            <button
+              onClick={runVerify}
+              className="mt-4 rounded-md border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:border-zinc-500"
+            >
+              Re-read position
+            </button>
+          )}
+        </Step>
+      )}
     </div>
   );
 }
