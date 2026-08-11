@@ -251,6 +251,12 @@ Aave v4는 대안이 아니다 — Ethereum 메인넷만 지원(L2 없음), 그�
 9. `recipientAddress`는 **엄격한 EIP-55 체크섬 검증**. 대소문자 섞인 주소의 체크섬이 틀리면 거부(`Invalid recipient address`).
    → **전부 소문자로 넘기거나** 정확한 체크섬 형태로. 손으로 대소문자 고치지 말 것
 10. `kh_` 키에 스코프가 걸려 있으면 쓰기 작업에 **`mcp:write` 스코프** 필요 (없으면 403). 스코프 없는 키는 통과
+11. **`web3/*` 액션은 `execute_protocol_action`으로 직접 실행이 안 된다** (8/11 실증).
+    `501 Not Implemented — "Direct execution not supported for web3/approve-token. Use workflow execution instead."`
+    → `create_workflow`로 노드를 만들고 `execute_workflow`로 돌려야 한다. `aave-v3/*` 같은 **프로토콜 액션만**
+    직접 실행 대상이다. (8/9에 팀이 approve를 워크플로우로 만든 이유가 이것)
+12. `execute_workflow`는 **`{executionId, status:"running"}`만 돌려준다** — 결과가 아니다.
+    반드시 `get_execution(executionId)`으로 폴링해야 실제 성공/tx 해시를 안다
 11. `execute_protocol_action`의 응답은 MCP `isError`가 아니라 **`content[0].text` 안의 JSON `{success, error}`로 실패를 알려준다** — `isError`만 보면 실패를 성공으로 오인함(8/9 실증, app/executors/keeperhub.ts의 `toTxResult` 참조)
 12. `web3/approve-token`은 **`execute_protocol_action`(직접 실행)을 지원 안 함** — "Direct execution not supported... Use workflow execution instead" 에러. 워크플로우로 만들어서 `execute_workflow`로 실행해야 함
 13. `aave-v3/supply`는 `referralCode`가 스키마상 optional인데 **실제로는 없으면 거부됨**("referralCode: uint16 is missing"). `"0"` 기본값 필요
@@ -586,11 +592,24 @@ isolation/siloed 여부 전부 확인. **더 이상 추측 아님.**
 - [ ] `analyzer.ts`의 base currency 8자리 / HF 18자리 소수 가정. Aave Pool 문서에 자릿수 명시가 없다.
       **실제 포지션이 생기면 그때 실측으로 확정할 것**
 
-*C. KeeperHub 동작 가정 — 데모 막별로 직결*
-- [ ] `execute_protocol_action` 응답에 tx 링크가 오는가 → **3막의 결과물**
-- [ ] MCP로 직접 실행한 protocol action이 **audit trail에 남는가** → **5막 전체**
-- [ ] Base 메인넷 가스 크레딧 잔여 → 스폰서 형태냐 자기지갑 형태냐 → **4막 대사**
-- [ ] `web3/approve-token`이 Base에서 동작하는지·파라미터 형태 (`list_action_schemas`로 확인 가능)
+*C. KeeperHub 동작 — ✅ 8/11 실증으로 해소됨*
+Base 메인넷에서 `web3/approve-token`을 워크플로우로 실제 실행해 전부 확인했다.
+**tx `0x3e6718070bf85cc386e311d04c530ecccc21efe8695f454fc2bcc4206864e5c6`**
+(https://basescan.org/tx/0x3e6718070bf85cc386e311d04c530ecccc21efe8695f454fc2bcc4206864e5c6)
+- [x] **tx 링크가 온다** — `get_execution`의 `output.transactionHash` / `output.transactionLink`.
+      단 `execute_protocol_action`이 아니라 **워크플로우 실행 결과**에서 나온다(함정 11·12)
+- [x] **audit trail이 정확히 공고가 말한 형태다** → **5막 확보.** `get_execution`이 돌려주는 것:
+      trigger·노드별 status / `transactionHashes[]`(hash, chainId, blockNumber, gasUsed,
+      **`verified:true`**, `receiptStatus:"success"`) / duration / timestamps / `runId` / `billable`.
+      **온체인 영수증과 대조된 값**이라 "실행했다"의 증거로 그대로 쓸 수 있다
+- [x] **가스 스폰서십 Base에서 작동** — 응답에 `sponsored: true`,
+      top-level to가 릴레이어(`0x5af5194b…`) → §3의 스폰서 tx 형태 그대로. **4막 대사 확정**
+- [x] **실측 가스 비용**: 117,664 gas × 0.006 gwei ≈ **$0.003/건**.
+      Free 플랜 크레딧 $1.00이면 **수백 건**이 가능하다 → 가스는 더 이상 제약이 아니다
+- [x] `web3/approve-token` Base 동작 + 파라미터 형태 확인 (`tokenConfig`는 JSON 문자열, `amount:"max"`)
+
+⚠️ 남은 것: `execute_protocol_action`(= 우리 `execute()`가 쓰는 경로)의 **응답 형태는 아직 미확인**이다.
+워크플로우 경로에서 `transactionLink`가 나온다는 건 확인됐지만 직접 실행 경로도 같은지는 Aave 실행 때 확인.
 
 *D. Aave 동작 가정 — A 이후 남은 것*
 - [ ] **WETH를 supply하면 자동으로 담보로 잡히는가.** 안 잡히면 HF가 무한대로 남아 **데모가 성립하지 않는다.**
