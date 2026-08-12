@@ -7,6 +7,9 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.join(__dirname),
   },
+  // next dev가 app/ 안에 CLAUDE.md·AGENTS.md를 자동 생성한다. 루트 CLAUDE.md가 이 레포의
+  // 규칙 파일인데 하위에 또 생기면 지시가 갈리므로 끈다.
+  agentRules: false,
 };
 
 export default nextConfig;

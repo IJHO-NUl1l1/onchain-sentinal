@@ -460,3 +460,22 @@ approve는 자산을 안 움직이고 `web3/*`라 가스가 대납돼 **빈 지�
   다시 씀 — 제출 서면이라 거짓 진술이 남으면 안 됨. `ANTHROPIC_API_KEY`도 env 목록에 추가.
   검증: `next build` 통과, 컨트랙트 `solc 0.8.25 (evm target: cancun)` 컴파일 통과
   (이 기기에 `contracts/node_modules`가 없어서 설치부터 함 — 두 기기 세팅 항목 그거).
+
+- 8/12 기기1(3): **Claude API 라이브 검증 완료 — 에이전트가 실제로 진단한다.**
+  크레딧 충전 직후엔 여전히 400(credit balance)이 떠서, SDK 대신 raw fetch로 원문을 봤더니
+  **HTTP 200**이었다. 즉 잔액 전파에 시차가 있었던 것이고 코드 문제가 아니었다. 원인 분리 과정에서
+  키 유효(401 아님)·`output_config` 수용·`max_tokens` 16000 수용을 각각 따로 확인해뒀다.
+  **검증 결과:**
+  - 위험 스냅샷(HF 1.0641) → `severity: high`, `action: REPAY_DEBT`. 근거에 "83% 임계값까지
+    ~6% 여유"라고 실제 수치를 인용하고, 나머지 6개 액션을 왜 안 골랐는지까지 적었다. 11.6초.
+  - 실지갑(`0x2b33…`, Aave 포지션 없음) → `severity: low`, `action: NO_ACTION`. 8.1초.
+    **같은 프롬프트에 다른 데이터를 주면 다른 답이 나온다 = 대본이 아니라 실제 판단이라는 증거.**
+  - `stepAnalyze` 실호출 2.4초 — HF `∞ (no debt)`, raw uint256 최댓값까지 정상 직렬화.
+  - enum 안전장치: `DRAIN_WALLET`·없는 severity·필드 누락·비JSON 전부 거부, 정상만 통과.
+  - `next dev` 200, 초기 화면에 1막만 노출(단계별 공개 설계대로 동작).
+  ⚠️ **UI 클릭 검증은 못 했다** — 브라우저 조작이 안 되므로 2~5막의 실제 화면 전환은 사용자 확인 필요.
+    다만 각 막이 쓰는 서버 액션 자체는 위에서 직접 호출로 검증됨.
+  ⚠️ **부수 발견**: `next dev`가 `app/CLAUDE.md`·`app/AGENTS.md`를 자동 생성한다(Next 16 기능).
+    루트 CLAUDE.md가 규칙 파일인데 하위에 또 생기면 지시가 갈려서 `next.config.ts`에
+    `agentRules: false`로 끄고 두 파일 삭제. dev 재기동해도 다시 안 생기는 것 확인.
+  ✅ 키 교체 확인 — 유출된 옛 키는 `app/.env`에 없고, `.env`는 gitignore 대상이며 커밋 이력 없음.
