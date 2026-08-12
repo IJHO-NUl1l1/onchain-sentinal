@@ -718,15 +718,29 @@ Base 메인넷에서 `web3/approve-token`을 워크플로우로 실제 실행해
   AssetVault 패턴(deposit/borrow/repay/withdraw+LTV) 대조. `borrow`/`set-collateral`은 방어용 에이전트가
   쓸 이유가 없어 제외. 코드: `app/executors/types.ts`의 `ActionType`.
 
-  | 추상 액션 | KeeperHubExecutor | FlareExecutor |
+  **⚠️ 8/12 정정** — FlareExecutor 열이 `AssetVault`/`PriceTriggeredSafe`를 가리키고 있었으나
+  그 컨트랙트들은 실물이 없다(§3의 8/9 정정 참조). 실제 배포된 건 `SentinelVault` 하나이고,
+  아래는 그 컨트랙트 기준으로 다시 쓴 표다. Flare 쪽은 전부 `agentRespond(user, ActionType)`
+  한 함수로 들어가며, 컨트랙트가 상태를 바꾸는 건 현재 `LOCK_POSITION`뿐이고 나머지는
+  `AgentResponded` 이벤트만 남긴다(자금 이동 액션은 스코프 밸브로 미룸).
+
+  | 추상 액션 | KeeperHubExecutor | FlareExecutor (`SentinelVault`) |
   |---|---|---|
-  | `NO_ACTION` | 없음(로그만) | 없음(로그만) |
-  | `INCREASE_MONITORING` | 워크플로우 스케줄 단축 등 | 없음(로드맵) |
-  | `SUPPLY_COLLATERAL` | `aave-v3/supply` | `AssetVault.deposit()` |
-  | `WITHDRAW_COLLATERAL` | `aave-v3/withdraw` | `AssetVault.withdraw()` |
-  | `REPAY_DEBT` | `aave-v3/repay` | `AssetVault.repay()` |
-  | `LOCK_POSITION` | (전액 인출로 흉내) | `isLocked` 설정 (PriceTriggeredSafe) |
-  | `ACCELERATE_ORACLE` | 해당 없음 | `offerIncentive()` (Volatility Incentive, Flare 전용) |
+  | `NO_ACTION` | 호출 없음 | 호출 없음 (가스 안 씀) |
+  | `INCREASE_MONITORING` | 워크플로우 스케줄 단축 등 | 호출 없음 (로드맵) |
+  | `SUPPLY_COLLATERAL` | `aave-v3/supply` | `agentRespond` → 이벤트만 (자금이동 미구현) |
+  | `WITHDRAW_COLLATERAL` | `aave-v3/withdraw` | `agentRespond` → 이벤트만 |
+  | `REPAY_DEBT` | `aave-v3/repay` | `agentRespond` → 이벤트만 |
+  | `LOCK_POSITION` | (전액 인출로 흉내) | `agentRespond` → **`isLocked = true`** (실제 상태 변경) |
+  | `ACCELERATE_ORACLE` | 해당 없음 | `agentRespond` → 이벤트만 (`offerIncentive`는 로드맵) |
+
+  **✅ FlareExecutor 실동작 검증 (8/12, Coston2):** `app/executors/flare.ts` 구현 후 실행 —
+  `provisionMonitoring` → `setPolicy` tx `0x270ad4a0…b217`(anchorPrice `607000` 기록, gasUsed 114,608),
+  `execute(LOCK_POSITION)` → `agentRespond` tx `0xcc8092c9…a222`(gasUsed 29,372) →
+  **`policies(...).isLocked`가 실제로 `true`로 바뀐 것까지 온체인 조회로 확인.**
+  `execute(NO_ACTION)`은 트랜잭션을 보내지 않는다(KeeperHubExecutor와 동일 판단).
+  ⚠️ `setPolicy`는 정책을 `msg.sender`에 귀속시킨다 → **Flare도 감시 대상 = 서명 지갑**이다
+  (KeeperHub가 Turnkey 지갑에만 방어 가능한 것과 같은 종류의 제약).
 - [ ] MVP 감시 범위 (KH=Aave v3 유력 / Flare=담보볼트)
 - [ ] 데모 시나리오 자산·상황 (급락 연출 방법)
 - [ ] 두 마감 타임존 최종 확인 (제출 페이지 로컬 표시)

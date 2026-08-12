@@ -180,9 +180,14 @@ Aave credit delegation, which is roadmap.
 
 **The Flare track is a sibling, not decoration.** `SentinelVault.sol` is deployed on Coston2 at
 [`0xBf5778109e894b7C093D91B8a7518c95Fe74c3EF`](https://coston2-explorer.flare.network/address/0xBf5778109e894b7C093D91B8a7518c95Fe74c3EF)
-and reads live FTSO prices to make the same call without an LLM in the loop. It is in this repo
-because it is the second implementation behind the same interface. It is not part of this
-submission's claim.
+and reads live FTSO prices to make the same call without an LLM in the loop. `FlareExecutor`
+implements the same two methods against it, so the interface has two real implementations rather
+than one and a placeholder — `setPolicy`
+([`0x270ad4a0…`](https://coston2-explorer.flare.network/tx/0x270ad4a0268d0e7b92657464da9b0d4309d57ff6e35415e81ae7e528e6b5b217))
+anchored the policy to a live FTSO price, and an agent verdict of `LOCK_POSITION`
+([`0xcc8092c9…`](https://coston2-explorer.flare.network/tx/0xcc8092c96f2f55f6815ec22c6c3736192c83546a1696e4d9a9e4cec71e72a222))
+flipped `isLocked` on chain. Judge this submission on the KeeperHub track; the Flare work is here
+because it is what makes the executor boundary a claim about code rather than about intent.
 
 ---
 

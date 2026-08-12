@@ -525,3 +525,24 @@ approve는 자산을 안 움직이고 `web3/*`라 가스가 대납돼 **빈 지�
   ⚠️ **여전히 미확인(사용자)**: ①브랜치 URL(`/tree/submission/keeperhub`)이 GitHub 필드 검증을
     통과하는가 — 단일 레포+브랜치동결 전략 전체의 전제 ②나머지 4개 탭의 필수 항목
     ③소셜 계정 확보 가능 여부
+
+- 8/12 기기1(8): **★ FlareExecutor 구현 + Coston2 실동작 검증 완료.**
+  `app/executors/flare.ts` — viem(`flareTestnet`=Coston2 114, RPC/익스플로러가 문서값과 일치함을
+  확인 후 사용). `provisionMonitoring`→`setPolicy`, `execute`→`agentRespond(user, uint8)`.
+  **라이브 결과 (전부 실제 tx):**
+  - `setPolicy` tx `0x270ad4a0…b217` — anchorPrice `607000`(실FTSO), gasUsed 114,608
+  - `execute(LOCK_POSITION)` tx `0xcc8092c9…a222` — gasUsed 29,372
+  - → **`policies(...).isLocked`가 `true`로 바뀐 것을 온체인 조회로 확인.**
+    이로써 앞서 지적했던 "방어 분기가 온체인에서 한 번도 실행된 적 없음"이 해소됐다.
+    `agentRespond` 최초 호출이고 `AgentResponded` 이벤트도 처음 emit됨.
+  - `execute(NO_ACTION)`은 tx를 보내지 않는다(KeeperHubExecutor와 동일 판단, 콘솔 4막 로직과도 일치).
+  **주의점 3개 처리:** ①명시적 `gasLimit` 300k(실증된 함정) ②Solidity enum 인덱스와 TS `ActionType`
+  순서 일치(컨트랙트가 uint8을 받아서 어긋나면 조용히 다른 액션이 실행됨 — 주석으로 못박음)
+  ③`app/.env`에 `DEPLOYER_PRIVATE_KEY`/`COSTON2_RPC_URL` 추가(값 출력 없이 복사, `.env`는 미추적 확인).
+  **문서 정정:** §10 매핑표의 FlareExecutor 열이 실물 없는 `AssetVault`/`PriceTriggeredSafe`를
+  가리키고 있어서 `SentinelVault` 기준으로 다시 씀. 상태를 바꾸는 건 `LOCK_POSITION`뿐이고
+  나머지는 이벤트만 남는다는 것도 명시(과대 서술 방지).
+  ⚠️ `setPolicy`가 정책을 `msg.sender`에 귀속 → Flare도 감시대상=서명지갑. KeeperHub의 Turnkey
+  제약과 같은 종류이고 README에도 이미 그 취지가 적혀 있음.
+  README의 "두 번째 구현체" 문장에 이제 실제 tx 링크 두 개를 근거로 붙였다 —
+  **동결해도 심사본 코드가 주장을 뒷받침한다.**
