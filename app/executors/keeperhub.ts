@@ -1,12 +1,5 @@
-// 🔵 KeeperHub 전용. architecture.md §3 "KeeperHub 기술 스펙" 참조.
-// 이 파일 밖(agent/, app/app/ 라우트)에는 KeeperHub 관련 분기를 두지 않는다.
-//
-// MCP HTTP(https://app.keeperhub.com/mcp)에 헤드리스로 붙는다
-// (architecture.md "헤드리스는 --header Authorization: Bearer kh_...").
-//
-// 워크플로우 node/edge의 정확한 형태(트리거 config, 액션 노드의 actionType/_protocolMeta 등)는
-// architecture.md에 스키마 수준까지는 없어서, 실제 MCP 세션에서 list_workflows로 기존
-// "Aave Health Factor Monitor" 워크플로우를 조회해 그 구조를 그대로 가져왔다 — 지어내지 않았다.
+// 🔵 KeeperHub 전용. MCP HTTP에 헤드리스로 붙는다. architecture.md §3 참조.
+// KeeperHub 관련 분기는 이 파일 밖에 두지 않는다.
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
@@ -19,17 +12,14 @@ import type {
   TxResult,
 } from "./types";
 
-// callTool()의 반환 타입을 SDK의 Client 클래스에서 그대로 뽑아 쓴다 — 버전마다
-// CallToolResult 유니온이 조금씩 달라서 직접 import한 타입과 어긋날 수 있기 때문.
+// SDK 버전마다 CallToolResult 유니온이 달라서 Client에서 직접 뽑아 쓴다.
 type CallToolReturn = Awaited<ReturnType<Client["callTool"]>>;
 
 const MCP_URL = "https://app.keeperhub.com/mcp";
 const DEV_CHAIN_ID = process.env.KEEPERHUB_DEV_CHAIN_ID ?? "8453";
 
-// 실행 지갑(Turnkey EOA) 주소. Aave 액션의 onBehalfOf/to에 쓴다.
-// KeeperHub가 서명할 수 있는 지갑이 이것뿐이라 포지션의 주인도 항상 이 주소다
-// (감시는 임의 주소로 되지만 방어는 이 지갑에 한정 — architecture.md §8-2).
-// ⚠️ 수신 주소는 엄격한 EIP-55 체크섬 검증을 받는다. 체크섬 형태 그대로 넣을 것.
+// 실행 지갑(Turnkey EOA). KeeperHub가 서명 가능한 지갑이 이것뿐이라 포지션 주인도 항상 이 주소다.
+// ⚠️ 엄격한 EIP-55 체크섬 검증을 받는다 — 체크섬 형태 그대로 넣을 것.
 function executorAddress(): string {
   const addr = process.env.KEEPERHUB_EXECUTOR_ADDRESS;
   if (!addr) {
@@ -40,8 +30,7 @@ function executorAddress(): string {
   return addr;
 }
 
-// architecture.md §10 매핑표. ACCELERATE_ORACLE은 Flare 전용이라 여기 없다 —
-// 호출되면 execute()가 명시적으로 거부한다.
+// architecture.md §10 매핑표. ACCELERATE_ORACLE은 Flare 전용이라 없다.
 const ACTION_TYPE_MAP: Partial<Record<ActionType, string>> = {
   SUPPLY_COLLATERAL: "aave-v3/supply",
   WITHDRAW_COLLATERAL: "aave-v3/withdraw",
@@ -62,9 +51,7 @@ async function connect(): Promise<Client> {
   return client;
 }
 
-// ⚠️ 8/9 실증: KeeperHub는 MCP의 isError를 안 쓰고, content[0].text 안에 JSON 문자열로
-// {success, error, ...}를 담아 돌려준다 (예: referralCode 누락 에러가 이 경로로 왔음 —
-// isError는 undefined였는데 본문은 success:false였다). isError만 보면 실패를 놓친다.
+// ⚠️ KeeperHub는 MCP의 isError를 안 쓴다. 실패도 content[0].text 안에 {success:false}로 온다.
 function parseBody(result: CallToolReturn): Record<string, unknown> | undefined {
   if ("structuredContent" in result && result.structuredContent) {
     return result.structuredContent as Record<string, unknown>;
@@ -82,9 +69,7 @@ function parseBody(result: CallToolReturn): Record<string, unknown> | undefined 
   return undefined;
 }
 
-// ⚠️ 8/11 실증: `execute_protocol_action`은 페이로드를 `result` 아래에 중첩해 돌려준다
-// (`{success, result:{...}, addressLink}`). 워크플로우 실행 경로(`get_execution`)는
-// `output.transactionLink`로 평평하게 준다. 어느 쪽이 와도 찾도록 두 군데를 다 본다.
+// `execute_protocol_action`은 `result` 아래 중첩, 워크플로우 실행 경로는 평평하게 준다. 둘 다 본다.
 function pickTransactionLink(body: Record<string, unknown> | undefined): string | undefined {
   if (!body) return undefined;
   if (typeof body.transactionLink === "string") return body.transactionLink;
@@ -98,8 +83,7 @@ function pickTransactionLink(body: Record<string, unknown> | undefined): string 
 
 function toTxResult(result: CallToolReturn): TxResult {
   const body = parseBody(result);
-  // 본문을 못 읽으면 성공을 확인할 수 없으므로 실패로 본다. 방어 시스템에서
-  // "실패를 성공으로 보고하는 것"이 가장 나쁜 실패 모드다 (8/10).
+  // 본문을 못 읽으면 실패로 본다 — 방어 시스템에서 실패를 성공으로 보고하는 게 최악의 실패 모드다.
   const success =
     result.isError !== true && body !== undefined && (body.success === undefined || body.success === true);
   const transactionLink = pickTransactionLink(body);
@@ -193,16 +177,9 @@ export class KeeperHubExecutor implements Executor {
       );
     }
 
-    // 액션별 필수/권장 기본값. 호출자가 넘긴 값이 항상 우선한다.
-    //
-    // ⚠️ 8/9 실증 함정: search_protocol_actions 스키마엔 optionalFields로 나오지만
-    // aave-v3/supply는 referralCode 없이 호출하면 "referralCode: uint16 is missing"으로
-    // 거부된다. 0(추천인 없음)을 기본값으로 채운다.
-    //
-    // ⚠️ 8/10 Aave 공식 Pool 문서 대조: supply/repay는 onBehalfOf가, withdraw는 to가
-    // required다. 둘 다 실행 지갑이어야 한다 — KeeperHub가 서명 가능한 지갑이 그것뿐이라
-    // 포지션도 그 주소에 귀속된다. interestRateMode는 "should always be passed 2"(variable,
-    // stable은 폐기)인데 KeeperHub 스키마에선 optional이라 기본값을 신뢰하지 않고 명시한다.
+    // 액션별 기본값. 호출자가 넘긴 값이 우선한다.
+    // ⚠️ 아래 필드들은 KeeperHub 스키마상 optional로 나오지만 실제로는 빠지면 거부되거나
+    // 잘못된 기본값이 잡힌다(referralCode 누락 시 422, interestRateMode는 항상 2=variable).
     const defaults: Record<string, unknown> = {};
     if (actionType === "aave-v3/supply") {
       defaults.referralCode = "0";

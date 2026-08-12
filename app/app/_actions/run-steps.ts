@@ -1,9 +1,7 @@
 "use server";
 
-// 데모 콘솔의 서버 진입점. architecture.md §8-2의 5막을 각각 하나의 서버 액션으로 나눴다.
-// 클라이언트가 한 단계씩 순서대로 부르므로 화면에 뜨는 순서 = 실제 실행 순서다(연출 아님).
-//
-// bigint는 서버 액션 경계를 못 넘으니 전부 문자열로 직렬화해서 넘긴다.
+// 데모 콘솔의 서버 진입점. architecture.md §8-2의 5막을 각각 서버 액션 하나로 나눴다.
+// bigint는 서버 액션 경계를 못 넘으니 전부 문자열로 직렬화한다.
 
 import { formatUnits } from "viem";
 import { analyzeWallet, getAaveAccountData } from "../../agent/analyzer";
@@ -89,11 +87,7 @@ export async function stepProvision(profile: MonitoringProfile) {
   });
 }
 
-/**
- * 3막 — 실제 데이터로 완성된 프롬프트를 조립한다. 사람이 이 문자열을 그대로 복사해
- * Claude에 붙여넣는다 — 조립은 코드가 했으니, 사람이 하는 일은 "이걸 API로 보내는 것"
- * 하나로 줄어든다 (agent/prompt.ts 상단 주석 참조).
- */
+/** 3막 폴백 — 프롬프트만 조립해서 돌려준다 (API 키 없이 손으로 옮길 때) */
 export async function stepBuildPrompt(
   profile: MonitoringProfile,
   snapshot: AaveSnapshot,
@@ -101,22 +95,14 @@ export async function stepBuildPrompt(
   return buildAgentPrompt(profile, JSON.stringify(snapshot, null, 2));
 }
 
-/**
- * 3막 — Claude가 낸 응답을 검증한다. `action`이 enum 밖이면 여기서 거부된다 —
- * "LLM 출력을 enum으로 제한한다"는 원칙이 프롬프트의 부탁이 아니라 코드로 강제되는 지점.
- */
+/** 3막 폴백 — 손으로 받아온 응답을 검증한다 */
 export async function stepParseVerdict(
   raw: string,
 ): Promise<{ ok: true; verdict: Verdict } | { ok: false; error: string }> {
   return parseVerdict(raw);
 }
 
-/**
- * 3막 — 프롬프트 조립 → Claude 호출 → 검증까지 한 번에. 사람이 끼지 않는다.
- * 조립(`buildAgentPrompt`)과 검증(`parseVerdict`)은 원래부터 코드였고, 가운데 API 호출만
- * 사람이 대신하고 있었다 — `askAgent`가 그 칸을 채우면서 루프가 자동으로 닫힌다.
- * 수동 인계 경로(`stepBuildPrompt`/`stepParseVerdict`)는 API 키가 없을 때의 폴백으로 남긴다.
- */
+/** 3막 — 프롬프트 조립 → Claude 호출 → 검증. 사람이 끼지 않는 기본 경로다. */
 export async function stepDiagnose(profile: MonitoringProfile, snapshot: AaveSnapshot) {
   return timed(async () => {
     const prompt = buildAgentPrompt(profile, JSON.stringify(snapshot, null, 2));

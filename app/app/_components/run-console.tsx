@@ -1,10 +1,8 @@
 "use client";
 
-// 데모용 실행 콘솔. architecture.md §8-2의 5막을 화면 위에 순서대로 펼친다.
-// 발표 자료처럼 한 막씩 진행한다 — 다음 막은 이전 막이 끝나야 나타나고, 각자 자기 버튼으로
-// 넘어간다(자동 연쇄 없음). 일반 제품 UI보다 훨씬 많은 날것의 정보(원본 응답, tx 해시, 가스,
-// 링크)를 노출하지만 기본은 접어둔다 — 필요할 때만 펼쳐 보는 것.
-// 각 단계는 실제로 순차 호출된다. 화면에 뜨는 순서 = 실행 순서(연출 아님).
+// 데모용 실행 콘솔. architecture.md §8-2의 5막을 한 막씩 펼친다 — 다음 막은 이전 막이
+// 끝나야 나타나고 각자 자기 버튼으로 넘어간다(자동 연쇄 없음).
+// 원본 응답·tx 해시 같은 날것의 정보를 그대로 노출하되 기본은 접어둔다.
 
 import { useEffect, useState } from "react";
 import {
@@ -29,7 +27,7 @@ type Status = "idle" | "running" | "success" | "error" | "waiting";
 interface Row {
   label: string;
   value: string;
-  /** 이 값이 무엇인지 한 줄 설명 — 영상에서 설명 없이도 읽히도록 */
+  /** 이 값이 무엇인지 한 줄 설명 */
   hint?: string;
   href?: string;
   strong?: boolean;
@@ -207,7 +205,7 @@ export function RunConsole() {
   const [verdict, setVerdict] = useState<Verdict | null>(null);
   const [verdictErr, setVerdictErr] = useState<string | null>(null);
   const [verdictLoading, setVerdictLoading] = useState(false);
-  /** 모델이 돌려준 원문 — 판정이 우리가 지어낸 게 아니란 증거로 화면에 그대로 띄운다 */
+  /** 모델이 돌려준 원문. 판정이 지어낸 값이 아니라는 증거로 그대로 띄운다 */
   const [verdictRaw, setVerdictRaw] = useState<unknown>(null);
   const [verdictMs, setVerdictMs] = useState<number | undefined>(undefined);
 
@@ -222,8 +220,7 @@ export function RunConsole() {
   });
   const [after, setAfter] = useState<AaveSnapshot | null>(null);
 
-  // 2막 성공하면 바로 3막용 프롬프트를 조립해둔다 — 사람이 손으로 조립하는 게 아니라
-  // 코드가 실제 데이터로 완성한 문자열이다 (agent/prompt.ts).
+  // 2막이 끝나면 3막 프롬프트를 미리 조립해 화면에 띄워둔다.
   useEffect(() => {
     if (provision.status !== "success" || !profile || !snapshot) return;
     let cancelled = false;
@@ -239,7 +236,7 @@ export function RunConsole() {
     const target = address.trim();
     if (!target) return;
 
-    // 새로 시작 — 뒤 단계는 전부 리셋 (다시 지갑 넣고 돌리는 경우)
+    // 다시 돌리는 경우라 뒤 단계를 전부 리셋한다
     setSnapshot(null);
     setProfile(null);
     setProvision({ status: "idle" });
@@ -309,7 +306,7 @@ export function RunConsole() {
     setTimeout(() => setCopied(false), 1500);
   }
 
-  // 3막 기본 경로 — 조립·호출·검증이 전부 서버에서 한 번에 돈다. 사람은 버튼만 누른다.
+  // 3막 기본 경로 — 조립·호출·검증이 서버에서 한 번에 돈다.
   async function runDiagnose() {
     if (!profile || !snapshot) return;
     setVerdictErr(null);
@@ -325,7 +322,7 @@ export function RunConsole() {
     setVerdict(r.data.verdict);
   }
 
-  // 폴백 — API 키가 없을 때 프롬프트를 직접 옮겨 붙이는 경로.
+  // 폴백 — API 키 없이 손으로 옮겨 붙이는 경로.
   async function applyVerdict() {
     setVerdictErr(null);
     setVerdictLoading(true);
@@ -529,7 +526,6 @@ export function RunConsole() {
                 </pre>
               </div>
 
-              {/* 폴백 — API 키가 없는 기기에서도 데모가 끊기지 않게 남겨둔다 */}
               <details className="mt-3">
                 <summary className="cursor-pointer font-mono text-[10px] uppercase tracking-wider text-zinc-600 hover:text-zinc-400">
                   No API key? Relay the verdict manually

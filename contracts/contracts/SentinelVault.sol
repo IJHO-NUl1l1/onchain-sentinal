@@ -1,17 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.25;
 
-// architecture.md §2 [Contract] SentinelVault.sol 뼈대 그대로. FTSO 연동은
-// TestFtsoV2Interface/ContractRegistry — 실제 컴파일까지 확인한 임포트 경로다.
-// 개발망(Coston2)이라 getTestFtsoV2()(view, 가스無) 사용 — getFtsoV2()(payable)은
-// 프로덕션(Flare 메인넷) 전환 시 스코프.
+// FTSO 가격 피드로 하락을 감지해 스스로 방어하는 금고. architecture.md §2 참조.
+// ⚠️ 개발망(Coston2)이라 getTestFtsoV2()(view, 가스無) 사용 — 메인넷은 getFtsoV2()(payable).
 
 import { TestFtsoV2Interface } from "@flarenetwork/flare-periphery-contracts/coston2/TestFtsoV2Interface.sol";
 import { ContractRegistry } from "@flarenetwork/flare-periphery-contracts/coston2/ContractRegistry.sol";
 
 contract SentinelVault {
-    // app/executors/types.ts의 ActionType과 순서·이름 동일하게 유지할 것 —
-    // FlareExecutor가 enum 인덱스로 그대로 매핑한다.
+    // ⚠️ app/executors/types.ts의 ActionType과 순서·이름을 동일하게 유지할 것 (인덱스로 매핑된다).
     enum ActionType {
         NO_ACTION,
         INCREASE_MONITORING,
@@ -24,15 +21,13 @@ contract SentinelVault {
 
     struct Policy {
         bytes21 feedId;
-        uint256 anchorPrice; // setPolicy 시점 가격 (getFeedById 원값, decimals 미반영 — 같은 feed끼리
-        // 비교라 비율 계산엔 영향 없음)
+        uint256 anchorPrice; // setPolicy 시점 가격 (decimals 미반영 — 같은 feed끼리 비교라 무관)
         uint256 thresholdBips; // 하락 임계값 (BIPS, 10000 = 100%)
         bool isLocked;
         bool exists;
     }
 
-    /// Phase 2 agentRespond를 호출할 수 있는 화이트리스트 주소 (FlareExecutor의 서명 지갑).
-    /// CLAUDE.md 핵심 원칙: LLM 출력을 이 주소 + ActionType enum으로만 제한.
+    /// agentRespond를 호출할 수 있는 유일한 주소. LLM의 영향력을 이 주소 + enum으로만 제한한다.
     address public immutable agent;
 
     mapping(address user => Policy policy) public policies;
@@ -54,7 +49,7 @@ contract SentinelVault {
         agent = _agent;
     }
 
-    /// 감시망 설치. FlareExecutor.provisionMonitoring()이 호출.
+    /// 감시망 설치. 현재 가격을 기준점으로 잡는다.
     function setPolicy(bytes21 feedId, uint256 thresholdBips) external {
         TestFtsoV2Interface ftsoV2 = ContractRegistry.getTestFtsoV2();
         (uint256 value, , ) = ftsoV2.getFeedById(feedId);
@@ -70,8 +65,7 @@ contract SentinelVault {
         emit PolicySet(msg.sender, feedId, value, thresholdBips);
     }
 
-    /// 퍼미션리스 — 아무 키퍼 봇이나, 아무 user에 대해서나 호출 가능
-    /// (architecture.md §4 Phase 1 Steady State: LLM 무관여, 컨트랙트 자체 방어).
+    /// 퍼미션리스 — 아무 키퍼나 호출 가능. LLM 무관여, 컨트랙트가 스스로 방어한다.
     function checkAndExecute(address user) external {
         Policy storage policy = policies[user];
         if (!policy.exists) revert PolicyNotFound();
@@ -88,8 +82,7 @@ contract SentinelVault {
             return; // 정상 범위
         }
 
-        // 임계값의 2배 이상 괴리 = 명백한 위기 → 즉시 방어
-        // 임계값~2배 사이 = 회색지대 → 에스컬레이션만 (Phase 2, agentRespond 대기)
+        // 임계값 2배 이상 = 명백한 위기라 즉시 방어. 그 사이는 회색지대 → 에이전트에게 넘긴다.
         if (deviationBips >= policy.thresholdBips * 2) {
             policy.isLocked = true;
             emit ImmediateDefense(user, currentPrice, deviationBips);
@@ -98,9 +91,8 @@ contract SentinelVault {
         }
     }
 
-    /// 화이트리스트(agent) 전용 — 회색지대 에스컬레이션 이후 AI 판단 결과를 반영.
-    /// SUPPLY_COLLATERAL 등 실제 자금 이동이 필요한 액션은 후속 확장(스코프 밸브) —
-    /// 지금은 LOCK_POSITION만 실제로 처리, 나머지는 이벤트만 남긴다.
+    /// 회색지대 에스컬레이션에 대한 에이전트의 판단을 반영한다.
+    /// 자금 이동이 필요한 액션은 후속 확장 — 지금은 LOCK_POSITION만 처리하고 나머지는 이벤트만 남긴다.
     function agentRespond(address user, ActionType action) external onlyAgent {
         Policy storage policy = policies[user];
         if (!policy.exists) revert PolicyNotFound();

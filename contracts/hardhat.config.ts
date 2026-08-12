@@ -2,8 +2,7 @@ import "dotenv/config";
 import hardhatToolboxMochaEthersPlugin from "@nomicfoundation/hardhat-toolbox-mocha-ethers";
 import { defineConfig } from "hardhat/config";
 
-// architecture.md §3 "Flare 기술 스펙" 확정값 그대로 사용 — 지어낸 값 없음.
-// Coston2: RPC/chainId/EVM버전(cancun) 전부 문서에 명시된 값.
+// ⚠️ EVM 버전은 반드시 cancun. 안 맞추면 Coston2 배포가 실패한다.
 const COSTON2_RPC_URL = process.env.COSTON2_RPC_URL ?? "https://coston2-api.flare.network/ext/C/rpc";
 const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY ?? "";
 

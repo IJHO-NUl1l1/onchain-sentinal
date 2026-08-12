@@ -1,8 +1,5 @@
-// 🟢 analyzer: 지갑 조회 → 리스크 프로파일. architecture.md §2 [Agent].
-// "지갑 조회(viem/ethers, 둘 다 EVM)"(architecture.md §2 [Backend] 몸통) 원칙대로
-// viem으로 직접 온체인을 읽는다 — KeeperHub MCP를 호출하지 않는다. analyzer는
-// 🟢 공유 코드라 특정 executor(KeeperHub)에 종속된 방식을 쓰면 안 되기 때문
-// (CLAUDE.md "Executor 경계").
+// 🟢 analyzer: 지갑 조회 → 리스크 프로파일.
+// viem으로 직접 온체인을 읽는다 — 공유 코드라 특정 executor(KeeperHub MCP)에 종속되면 안 된다.
 
 import { createPublicClient, formatEther, formatUnits, http, isAddress } from "viem";
 import { base, sepolia } from "viem/chains";
@@ -34,10 +31,7 @@ export async function getNativeBalance(walletAddress: string): Promise<string> {
 }
 
 // ── Aave v3 실데이터 조회 (Base) ──────────────────────────────────────
-// architecture.md §0-1 "핵심 판단 기준" 1번 축: 진짜 온체인 데이터.
-// Pool 주소는 aave-address-book(AaveV3Base.sol)에서 가져온 뒤 8/9에
-// getReservesList()/getConfiguration()으로 직접 온체인 대조해 확정함
-// (Sepolia에서 문서-실제 불일치를 겪은 뒤라 반드시 이 단계를 거쳤다).
+// Pool 주소는 aave-address-book 값을 온체인 조회로 대조해 확정한 것.
 
 const baseClient = createPublicClient({
   chain: base,
@@ -101,9 +95,7 @@ export async function getAaveAccountData(walletAddress: string): Promise<AaveAcc
   };
 }
 
-// diagnoser 프롬프트에 붙여넣기 좋은 사람이 읽을 수 있는 형태로 변환.
-// totalCollateralBase 등은 Aave "base currency" 기준 8자리 소수(대략 USD),
-// healthFactor는 18자리 소수(1e18 = 1.0).
+// 사람이 읽는 형태로 변환. base currency는 8자리 소수(≈USD), healthFactor는 18자리(1e18 = 1.0).
 export function formatAaveAccountData(data: AaveAccountData): string {
   const hf =
     data.healthFactor > BigInt(2) ** BigInt(255)

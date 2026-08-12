@@ -1,6 +1,5 @@
-// 일회성 검증 스크립트: Base Aave v3의 USDC 리저브 설정을 온체인에서 직접 읽는다.
-// architecture.md §8-2 "미검증 가정 A"를 메우기 위한 것 — 문서를 믿지 않고 체인에서 확인한다.
-// 비트 레이아웃 출처: architecture.md §3 ReserveConfigurationMap 표.
+// 검증 스크립트: Base Aave v3 리저브 설정(LTV·청산임계값 등)을 온체인에서 직접 읽는다.
+// 비트 레이아웃은 architecture.md §3 ReserveConfigurationMap 표 참조.
 //
 // 사용법: node node_modules/tsx/dist/cli.mjs scripts/check-base-reserve.ts
 
@@ -49,7 +48,7 @@ async function retry<T>(label: string, fn: () => Promise<T>, tries = 5): Promise
 }
 
 async function main() {
-  // 검사할 자산. 인자로 넘기면 그 주소를, 없으면 getReservesList에서 고른 후보를 본다.
+  // 인자로 주소를 주면 그것만, 없으면 getReservesList에서 고른 후보를 본다.
   const target = process.argv[2];
   const reserves = await retry("getReservesList", () =>
     client.readContract({ address: POOL, abi: poolAbi, functionName: "getReservesList" }),

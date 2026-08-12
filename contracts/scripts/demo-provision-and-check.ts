@@ -1,12 +1,9 @@
 import { network } from "hardhat";
 
-// Phase 0/1 데모용 러너 (Flare): setPolicy → checkAndExecute를 실제 Coston2에서 실행.
-// docs/architecture.md §0-1 두 축(실 FTSO 데이터 + 온체인 판단)을 증명하는 스크립트.
+// Flare 데모 러너: setPolicy → checkAndExecute를 실제 Coston2에서 실행.
 //
-// ⚠️ 가스 견적 함정(8/9 실증): FLR/USD는 매 블록(~1.8초) 갱신되는 피드라, ethers의
-// 자동 gas estimate 시점과 실제 채굴 시점 사이에 가격이 바뀌면서 더 비싼 코드 경로를
-// 타 추정치가 빗나갈 수 있다(out-of-gas, 사유 없는 revert). checkAndExecute는 항상
-// 명시적 gasLimit을 준다 — FlareExecutor 구현 시에도 동일하게 적용할 것.
+// ⚠️ FLR/USD는 매 블록(~1.8초) 갱신돼서, 견적 시점과 채굴 시점 사이에 가격이 바뀌면
+// 더 비싼 코드 경로를 타 자동 gas estimate가 빗나간다(out-of-gas). 항상 명시적 gasLimit을 준다.
 
 const FLR_USD_FEED_ID = "0x01464c522f55534400000000000000000000000000"; // "FLR/USD", 21 bytes
 const VAULT_ADDRESS = "0xBf5778109e894b7C093D91B8a7518c95Fe74c3EF";
