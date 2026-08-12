@@ -20,10 +20,11 @@
 **8/9 기준: Phase A·B 완료, Phase C·D 동시 진행중.** 원안 대비 있었던 3~4일 지연(8/6 시점)은 Phase B를
 8/7-8/9로 압축해 흡수했다 — 개정 일정은 architecture.md 8장 참조.
 
-**⏰ 8/11(화) 11:00 현재 — KeeperHub 마감까지 약 2일 8시간, Flare까지 약 4일.**
+**⏰ 8/12(수) 17:00 현재 — KeeperHub 마감까지 약 26시간, Flare까지 약 2.5일.**
 (마감 = 공고 UTC+2 8/13 12:00 → **KST 8/13 19:00**. "UTC"가 아니라 **UTC+2**라 21:00이 아니다.)
-기술 코어는 두 트랙 다 §0-1 두 축을 실증했다. **남은 최대 리스크는 기능이 아니라 제출물이다**
-— 영상·README가 두 트랙 다 0%.
+
+**🔴 상황이 8/11에서 크게 바뀌었다 — 코드는 사실상 끝났고, 리스크가 전부 "제출 물류"로 옮겨갔다.**
+자금 없이 할 수 있는 코드 작업은 다 소진했다. 아래 "다음 기기가 할 일" 참조.
 
 **✅ 8/11: Base 메인넷 첫 트랜잭션 성공 — 자금 0원으로.**
 `0x3e6718070bf85cc386e311d04c530ecccc21efe8695f454fc2bcc4206864e5c6`
@@ -31,17 +32,30 @@ approve는 자산을 안 움직이고 `web3/*`라 가스가 대납돼 **빈 지�
 → 공고 제출 요건 *"a transaction your agent executed via KeeperHub"*는 **이미 충족된 상태**다.
    Aave 자금이 끝내 안 와도 제출 자체는 성립한다.
 
-**▶ 다음 작업 순서 (8/11 개정 — 근거·상세는 architecture.md §8-1, §8-2):**
-0. **Base 자금 확보 ← 임계경로.** 필요한 건 두 가지뿐:
-   - **USDC 30~50달러어치** (담보용)
-   - **네이티브 ETH 먼지** — `aave-v3/*`는 스폰서십 대상이 아니라서 필요. 다만 **0.000000231 ETH**면
-     충분해 몇십 센트어치로 수십 건 가능. **문제는 금액이 아니라 "0이면 안 된다"는 것**
-   - ⚠️ 업비트는 **이더리움 메인넷/솔라나만** 지원 → Base로 못 보낸다. 해외 거래소 경유 또는 온램프 필요
-1. `FlareExecutor` 구현 + executor 선택 배선 ← **KeeperHub 제출 전에 끝낼 것**
-   (제출 브랜치를 동결하면 그 코드가 8/20까지 심사 대상이라, 스텁이면 영원히 스텁으로 남는다)
-2. README 공통 골격 + 🔵 KeeperHub 버전 → 데모 영상 → `submission/keeperhub` 동결 → **조기 제출**
-3. 🟠 Flare README + 영상 (+여유 시 `offerIncentive`) → `submission/flare` 동결 → 제출
-- `execute()` Base 라이브 검증은 자금 도착 시에만. §0-1 기준 이미 통과라 **스코프밸브 대상**.
+## ▶ 다음 기기가 할 일 (8/12 17:00 기준, 우선순위 순)
+
+> **먼저 읽을 것**: 이 섹션 → 아래 "🔒 확정된 결정" → 작업 로그 맨 아래 8/12 항목들.
+> **환경 세팅**은 `/CLAUDE.md`의 "두 기기 개발" 참조. `app/.env`에 이제 **키가 4종** 필요하다
+> (`ANTHROPIC_API_KEY`, `KEEPERHUB_API_KEY`, `KEEPERHUB_EXECUTOR_ADDRESS`, `DEPLOYER_PRIVATE_KEY`
+> +`COSTON2_RPC_URL`). git으로 안 넘어오니 직접 채워야 한다.
+
+**⛔ 사용자만 할 수 있는 것 (코드로 못 뚫음 — 이게 지금 전부 임계경로다):**
+1. **소셜 링크 1개** — DoraHacks 제출 폼 필수(`*`). **없으면 제출 자체가 불가능하다.**
+2. **데모 영상 → YouTube 업로드** — 폼이 링크만 받는다(파일 첨부 아님). 채널 없으면 그 시간도 계산.
+3. **Base 자금** — WETH 담보 + 네이티브 ETH 먼지(0.000000231 ETH면 충분). 경로는 작업로그 8/12 기기2 참조.
+4. **브랜치 URL 검증** — 제출 폼 GitHub 칸에 `/tree/submission/keeperhub` 형식이 통과하는지.
+   단일 레포+브랜치동결 전략 전체의 전제다(§8-1). 거부되면 전략을 바꿔야 한다.
+5. **나머지 4개 탭**(Details/Team/Contact/Submission) 필수 항목 확인.
+
+**🟢 코드로 할 수 있는 것 — 자금이 오면:**
+6. 4~5막 라이브: approve→supply→borrow(MCP 수동)→`execute(REPAY_DEBT)`→재조회. §8-2 5막 대본대로.
+   ⚠️ 셋업 전부 KeeperHub 경유 필수(실행 지갑은 KeeperHub만 서명 가능), `aave-v3/borrow`는 enum에
+   없어서 MCP 손호출.
+7. 촬영 → `submission/keeperhub` 동결 + 태그 → **마감 기다리지 말고 제출**.
+8. 8/13~15: 🟠 Flare README(신규 작성) + 영상 (+여유 시 `offerIncentive`) → `submission/flare` 동결 → 제출.
+
+**자금이 안 와도 제출은 성립한다.** 요건인 "agent가 KeeperHub로 실행한 tx"는 `0x3e671807…`로 이미 충족.
+그 경우 4~5막은 영상에서 빼고 README의 정직성 절로 대체한다.
 
 **🔒 8/10 확정된 결정 (다시 논의하지 말 것):**
 - 데모 포지션 = **WETH 담보 + USDC 차입**, **Base 메인넷(8453)**. 목표 HF 2.0 / 정책 임계값 2.5
@@ -162,9 +176,13 @@ approve는 자산을 안 움직이고 `web3/*`라 가스가 대납돼 **빈 지�
       못 함(Aave Sepolia 테스트 포지션 필요, 아래 execute 검증과 동일 선행조건).
       **남은 것**: ①데모 시나리오(사건) 확정 ②Aave 테스트 토큰 확보 후 실제 실행 ③촬영
 - [ ] (선택·1순위 폐기 대상) Marketplace 등록으로 "실제 호출 가능" 시연
-- [ ] 💰 **바운티 노림수** — 함정 목록 13개를 영문 teardown으로 정리 (§8-2).
+- [x] 💰 **바운티 노림수 — 작성 완료 (8/12)**: `/KEEPERHUB-TEARDOWN.md` (루트. 제출용 문서라
+      "docs 3개 고정" 규칙 대상이 아니라고 사용자가 정리). 발견 12개 + "잘 되어 있던 것" 4개.
+      각 항목마다 무엇이 깨졌는지·왜 시간을 잡아먹었는지·제안하는 수정까지. README가 링크한다.
+      배치 1번은 `execute_protocol_action`의 실패 봉투 — 순진하게 짠 클라이언트가 실패를 성공으로
+      바꾼다는 논지(방어 제품에서 가장 나쁜 방향)라 임팩트 순으로 맨 앞에 뒀다.
       공고의 "Best Onboarding UX Improvement"가 "where you got stuck with proposed fixes"를
-      명시적으로 인정한다. $1,000 별도 상금이고 Grand Prize와 중복 수상 가능. 추가 작업이 거의 없다.
+      명시적으로 인정한다. $1,000 별도 상금이고 Grand Prize와 중복 수상 가능.
 - [ ] 데모 사전 준비 (§8-2, 8/10 개정) — **WETH 담보 / USDC 차입, Base 메인넷**
       - [ ] 실행 지갑에 **WETH** 확보 ← 방법 미해결(거래소 WETH 직접 출금? ETH 받아 wrap?)
       - [ ] Pool에 WETH approve → `aave-v3/supply`
@@ -208,12 +226,13 @@ approve는 자산을 안 움직이고 `web3/*`라 가스가 대납돼 **빈 지�
       `eth_getCode`로 실제 bytecode 존재 확인. 익스플로러:
       https://coston2-explorer.flare.network/address/0xBf5778109e894b7C093D91B8a7518c95Fe74c3EF
       제출물 "smart contract address"에 이 주소 기입하면 됨 — architecture.md §3에도 기록.
-- [ ] **FlareExecutor 어댑터 (`setPolicy`, `agentRespond`) ← 최우선, KeeperHub 제출 전에** (§8-1)
-      ※ 지금 `throw` 스텁이고 파일 주석도 낡음("컨트랙트가 아직 없어" — 8/9에 배포됨)
-      ※ `contracts/scripts/demo-provision-and-check.ts`가 이미 하는 일을 인터페이스로 감싸는 것
-      ※ 명시적 `gasLimit` 필수 (FLR/USD 매 블록 갱신 → 자동 견적 빗나감, 8/9 실증)
-      ※ 같이: `register-wallet.ts`의 `new KeeperHubExecutor()` 하드코딩 → executor 선택으로
-        (CLAUDE.md "Executor 경계" 위반 상태 해소)
+- [x] **FlareExecutor 어댑터 (`setPolicy`, `agentRespond`) 완료 (8/12)** — 상세는 작업로그 8/12 기기1(8).
+      viem `flareTestnet`(114) 사용, 명시적 `gasLimit` 300k, Solidity enum 인덱스 일치.
+      실동작: `setPolicy` `0x270ad4a0…b217` / `agentRespond(LOCK_POSITION)` `0xcc8092c9…a222`
+      → `isLocked=true` 온체인 확인. **방어 분기 최초 실행이라 Flare의 "실제 방어" 증빙도 이걸로 확보.**
+      ※ 남은 것: 콘솔/데모에서 executor를 **선택**하는 배선은 아직 없다(현재 UI는 KeeperHub 고정).
+        `Executor` 인터페이스로는 갈아끼울 수 있고 스크립트로는 둘 다 호출 가능하지만,
+        화면에서 토글하진 못한다. Flare 영상 찍을 때 필요하면 그때 붙이면 된다.
 - [ ] 키퍼 스크립트 (퍼미션리스 `checkAndExecute` 주기 호출)
 - [ ] (스코프밸브) FDC 유출검증 - 시간 되면 실구현, 안 되면 인터페이스+로드맵
 - [ ] Flare 데모 영상
@@ -546,3 +565,45 @@ approve는 자산을 안 움직이고 `web3/*`라 가스가 대납돼 **빈 지�
   제약과 같은 종류이고 README에도 이미 그 취지가 적혀 있음.
   README의 "두 번째 구현체" 문장에 이제 실제 tx 링크 두 개를 근거로 붙였다 —
   **동결해도 심사본 코드가 주장을 뒷받침한다.**
+
+- 8/12 기기1(9) — **핸드오프 정리.** 위 "▶ 다음 기기가 할 일" 섹션을 먼저 볼 것. 이번 세션에서
+  기록이 빠져 있던 것들:
+
+  **① 프로젝트명 `Sentinel` → `Onchain Sentinel`.** 이유: `Sentinel` 단독은 OpenZeppelin Defender의
+  "Sentinels"(온체인 모니터링 기능)와 정확히 겹친다. 긴 이름이 차별점("방어가 온체인에서 일어난다")도
+  담는다. **KeeperHub를 이름에 넣는 안은 기각** — 같은 코드로 Flare·CTC에도 내는데다, 제품명이 특정
+  executor면 "실행 엔진은 갈아끼울 수 있다"는 핵심 주장이 스스로 무너진다.
+  적용처: README 제목 / teardown / 브라우저 탭 / **콘솔 헤더**(영상에 찍히니 제출명과 같아야 함).
+  산문에서는 첫 등장 후 "Sentinel"로 줄여 쓰고, `SentinelVault`는 컨트랙트 이름이라 유지.
+
+  **② GitHub 레포 이름 오타 수정** — `onchain-sentinal` → `onchain-sentinel`(사용자가 변경).
+  API로 `full_name`·`default_branch: main`·**`private: false`**까지 확인함(심사위원이 열려면 필수).
+  로컬 remote도 갱신. **다음 기기는 clone URL이 바뀐 것에 주의**(옛 URL은 GitHub이 리다이렉트해줌).
+
+  **③ 제출 폼에 바로 붙일 값** (Profile 탭):
+  ```
+  BUIDL name  Onchain Sentinel
+  Category    Crypto / Web3
+  Logo        assets/logo.png   (480x480, 14KB. 원본 assets/logo.svg)
+  GitHub      https://github.com/IJHO-NUl1l1/onchain-sentinel/tree/submission/keeperhub
+  ```
+  Vision 초안(길면 앞 두 문장만 써도 논지는 산다):
+  > Lending positions get liquidated while their owners are asleep. Monitoring alone doesn't save
+  > them — someone still has to decide and act. Onchain Sentinel takes a wallet address, reads its
+  > live Aave v3 position on Base, designs and deploys a watch built for that specific wallet,
+  > diagnoses the risk with an LLM, and defends the position onchain through KeeperHub — with the
+  > model's authority bounded in code to seven predefined actions, so judgment stays soft and
+  > execution stays deterministic.
+
+  **④ 이번 세션에서 고친 README의 거짓 진술들** (같은 실수 반복 방지용으로 남김):
+  - `execute_workflow`/`get_execution`을 `keeperhub.ts`가 쓴다고 적혀 있었으나 그 파일엔 없다.
+    실제로는 직접 경로(`execute_protocol_action`)만 쓰고 폴링하지 않는다 → 사실대로 다시 씀.
+  - 인용한 워크플로우 2개가 Sepolia 설정 + 한국어 설명이었다 → Base 것으로 교체(그 뒤 Sepolia 것 삭제).
+  - "diagnosis is relayed by hand"가 `claude.ts` 생기면서 거짓이 됨 → 다시 씀.
+  - 아키텍처 다이어그램에 삭제된 `strategist`가 남아 있었음.
+  **교훈: 문서가 코드를 앞질러 주장하는 일이 반복됐다. 제출 직전에 README의 모든 코드 참조를
+  실제 파일과 한 번 더 대조할 것.**
+
+  **⑤ 현재 활성 KeeperHub 워크플로우** (심사위원이 대시보드를 볼 가능성 대비 정리해둠):
+  Base(8453) 감시망 2개만 `enabled=true` — `r6zhrb1yc7fgr7pre8oe3`(0x6Bc68c…),
+  `uaovii0ha77nknkfqhjaz`(0x2b33af…). 나머지는 전부 비활성. 한국어 설명 0건.

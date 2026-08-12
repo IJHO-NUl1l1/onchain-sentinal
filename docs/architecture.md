@@ -67,6 +67,15 @@
       진단했다는 점이 중요 — 가짜 위기를 지어내지 않음.
       **남은 것**: 실제 포지션이 있을 때(담보 공급 후) medium/high severity 진단도 실제로 나오는지 확인
       (Base에 자금 준비 후 진행)
+- [x] **2번 축 자동화 완료 (8/12)**: `agent/claude.ts`의 `askAgent()`가 Claude API를 직접 호출한다.
+      사람이 프롬프트를 옮겨 붙이던 마지막 한 칸이 사라졌고, 콘솔 3막이 버튼 하나로 돈다.
+      **위 "남은 것"도 사실상 확인됨** — 가짜 위험 스냅샷(HF 1.0641)을 주자 `high`/`REPAY_DEBT`가,
+      실지갑(포지션 없음)엔 `low`/`NO_ACTION`이 나왔다. **같은 프롬프트에 다른 데이터 → 다른 판정**이
+      확인된 것이라, 남은 건 그 데이터가 진짜 온체인 포지션이냐뿐이다(자금 도착 시).
+- [x] **executor 두 개가 모두 실동작 (8/12)**: `FlareExecutor` 구현 완료. `setPolicy`(anchorPrice
+      607000 기록) → `agentRespond(LOCK_POSITION)` → `isLocked=true` 온체인 확인.
+      **`Executor` 인터페이스 뒤에 진짜 구현이 둘** — "실행 엔진을 갈아끼운다"가 코드로 증명됨.
+      상세는 §10 매핑표 아래 "FlareExecutor 실동작 검증" 참조.
 - [x] **Flare 버전도 두 축 실증 (8/9)** — `SentinelVault.sol`을 Coston2에 배포
       (`0xBf5778109e894b7C093D91B8a7518c95Fe74c3EF`) 후 `setPolicy`/`checkAndExecute` 실행.
       1번 축: 진짜 FTSO FLR/USD 가격을 온체인에서 읽음(호출마다 값이 바뀌는 걸로 확인).
