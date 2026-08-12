@@ -15,7 +15,7 @@ export type ActionType =
   | "LOCK_POSITION"
   | "ACCELERATE_ORACLE";
 
-const ACTION_TYPES: readonly ActionType[] = [
+export const ACTION_TYPES: readonly ActionType[] = [
   "NO_ACTION",
   "INCREASE_MONITORING",
   "SUPPLY_COLLATERAL",

@@ -7,6 +7,7 @@
 
 import { formatUnits } from "viem";
 import { analyzeWallet, getAaveAccountData } from "../../agent/analyzer";
+import { askAgent } from "../../agent/claude";
 import { buildAgentPrompt, parseVerdict, type Verdict } from "../../agent/prompt";
 import { KeeperHubExecutor } from "../../executors/keeperhub";
 import type { Action, ActionType, MonitoringProfile } from "../../executors/types";
@@ -108,6 +109,25 @@ export async function stepParseVerdict(
   raw: string,
 ): Promise<{ ok: true; verdict: Verdict } | { ok: false; error: string }> {
   return parseVerdict(raw);
+}
+
+/**
+ * 3막 — 프롬프트 조립 → Claude 호출 → 검증까지 한 번에. 사람이 끼지 않는다.
+ * 조립(`buildAgentPrompt`)과 검증(`parseVerdict`)은 원래부터 코드였고, 가운데 API 호출만
+ * 사람이 대신하고 있었다 — `askAgent`가 그 칸을 채우면서 루프가 자동으로 닫힌다.
+ * 수동 인계 경로(`stepBuildPrompt`/`stepParseVerdict`)는 API 키가 없을 때의 폴백으로 남긴다.
+ */
+export async function stepDiagnose(profile: MonitoringProfile, snapshot: AaveSnapshot) {
+  return timed(async () => {
+    const prompt = buildAgentPrompt(profile, JSON.stringify(snapshot, null, 2));
+    const raw = await askAgent(prompt);
+    const parsed = parseVerdict(raw);
+    if (!parsed.ok) {
+      // 모델이 enum 밖 액션을 냈다는 뜻 — 실행으로 넘기지 않고 여기서 끊는다.
+      throw new Error(`Agent verdict rejected: ${parsed.error}`);
+    }
+    return { verdict: parsed.verdict, prompt, raw };
+  });
 }
 
 /** 3막 — 에이전트가 고른 액션을 온체인에서 실행한다 (§0-1 2번 축의 종착점) */

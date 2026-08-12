@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import {
   stepAnalyze,
   stepBuildPrompt,
+  stepDiagnose,
   stepExecute,
   stepParseVerdict,
   stepProvision,
@@ -206,6 +207,9 @@ export function RunConsole() {
   const [verdict, setVerdict] = useState<Verdict | null>(null);
   const [verdictErr, setVerdictErr] = useState<string | null>(null);
   const [verdictLoading, setVerdictLoading] = useState(false);
+  /** 모델이 돌려준 원문 — 판정이 우리가 지어낸 게 아니란 증거로 화면에 그대로 띄운다 */
+  const [verdictRaw, setVerdictRaw] = useState<unknown>(null);
+  const [verdictMs, setVerdictMs] = useState<number | undefined>(undefined);
 
   const [asset, setAsset] = useState(BASE_WETH);
   const [amount, setAmount] = useState("");
@@ -243,6 +247,8 @@ export function RunConsole() {
     setVerdict(null);
     setVerdictText("");
     setVerdictErr(null);
+    setVerdictRaw(null);
+    setVerdictMs(undefined);
     setExec({ status: "idle" });
     setVerify({ status: "idle" });
     setAfter(null);
@@ -303,6 +309,23 @@ export function RunConsole() {
     setTimeout(() => setCopied(false), 1500);
   }
 
+  // 3막 기본 경로 — 조립·호출·검증이 전부 서버에서 한 번에 돈다. 사람은 버튼만 누른다.
+  async function runDiagnose() {
+    if (!profile || !snapshot) return;
+    setVerdictErr(null);
+    setVerdictLoading(true);
+    const r = await stepDiagnose(profile, snapshot);
+    setVerdictLoading(false);
+    if (!r.ok || !r.data) {
+      setVerdictErr(r.error ?? "diagnosis failed");
+      return;
+    }
+    setVerdictMs(r.durationMs);
+    setVerdictRaw(r.data.raw);
+    setVerdict(r.data.verdict);
+  }
+
+  // 폴백 — API 키가 없을 때 프롬프트를 직접 옮겨 붙이는 경로.
   async function applyVerdict() {
     setVerdictErr(null);
     setVerdictLoading(true);
@@ -435,8 +458,11 @@ export function RunConsole() {
         <Step
           index={3}
           title="Agent reads it and decides"
-          subtitle="Claude may answer with only one of seven predefined actions — it cannot invent a new one. Manually relayed below; everything around this call is what an API integration would run unchanged."
+          subtitle="Claude reads the live position and answers with one of seven predefined actions — it cannot invent a new one. Assembled, called and validated in code."
           status={verdict ? "success" : "waiting"}
+          durationMs={verdictMs}
+          raw={verdictRaw ?? undefined}
+          rawLabel="Raw response from the model"
           rows={
             verdict
               ? [
@@ -465,17 +491,29 @@ export function RunConsole() {
           {!verdict && (
             <div className="mt-4">
               <p className="text-xs text-zinc-500">
-                Prompt assembly (left) and verdict validation (right) are both real code —{" "}
-                <code className="text-zinc-400">agent/prompt.ts</code>. The only manual step is the
-                middle: sending this exact string to Claude and pasting back what it says. Wiring an
-                API key in place of that copy-paste is the entire difference between this demo and a
-                fully automated version — nothing else in the pipeline would change.
+                The prompt below was assembled by code from the live on-chain data above — no hand
+                editing. Pressing Diagnose sends it to Claude and validates the reply against the
+                action enum before anything can reach the chain (
+                <code className="text-zinc-400">agent/prompt.ts</code>,{" "}
+                <code className="text-zinc-400">agent/claude.ts</code>). A verdict naming an action
+                outside the enum is rejected here and never executes.
               </p>
+
+              <button
+                onClick={runDiagnose}
+                disabled={verdictLoading || !agentPrompt}
+                className="mt-3 rounded-md border border-sky-500/40 bg-sky-500/10 px-3 py-1.5 text-xs text-sky-200 hover:border-sky-400 disabled:opacity-40"
+              >
+                {verdictLoading ? "Diagnosing…" : "Diagnose with Claude"}
+              </button>
+              {verdictErr && (
+                <p className="mt-2 font-mono text-[11px] text-red-400">Rejected — {verdictErr}</p>
+              )}
 
               <div className="mt-3 rounded border border-zinc-800 bg-zinc-950">
                 <div className="flex items-center justify-between border-b border-zinc-800 px-3 py-1.5">
                   <span className="font-mono text-[10px] uppercase tracking-wider text-zinc-600">
-                    Prompt to send to the agent
+                    Prompt sent to the agent
                   </span>
                   <button
                     type="button"
@@ -491,26 +529,26 @@ export function RunConsole() {
                 </pre>
               </div>
 
-              <p className="mt-3 text-xs text-zinc-500">Paste the agent&apos;s JSON verdict back here.</p>
-              <textarea
-                value={verdictText}
-                onChange={(e) => setVerdictText(e.target.value)}
-                rows={4}
-                placeholder={'{"severity":"high","diagnosis":"...","action":"REPAY_DEBT","rationale":"..."}'}
-                className="mt-2 w-full rounded border border-zinc-800 bg-zinc-950 p-3 font-mono text-[11px] text-zinc-300 outline-none focus:border-sky-500/50"
-              />
-              {verdictErr && (
-                <p className="mt-1 font-mono text-[11px] text-red-400">
-                  Rejected — {verdictErr}
-                </p>
-              )}
-              <button
-                onClick={applyVerdict}
-                disabled={verdictLoading || !verdictText.trim()}
-                className="mt-2 rounded-md border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:border-zinc-500 disabled:opacity-40"
-              >
-                {verdictLoading ? "Validating…" : "Load verdict"}
-              </button>
+              {/* 폴백 — API 키가 없는 기기에서도 데모가 끊기지 않게 남겨둔다 */}
+              <details className="mt-3">
+                <summary className="cursor-pointer font-mono text-[10px] uppercase tracking-wider text-zinc-600 hover:text-zinc-400">
+                  No API key? Relay the verdict manually
+                </summary>
+                <textarea
+                  value={verdictText}
+                  onChange={(e) => setVerdictText(e.target.value)}
+                  rows={4}
+                  placeholder={'{"severity":"high","diagnosis":"...","action":"REPAY_DEBT","rationale":"..."}'}
+                  className="mt-2 w-full rounded border border-zinc-800 bg-zinc-950 p-3 font-mono text-[11px] text-zinc-300 outline-none focus:border-sky-500/50"
+                />
+                <button
+                  onClick={applyVerdict}
+                  disabled={verdictLoading || !verdictText.trim()}
+                  className="mt-2 rounded-md border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:border-zinc-500 disabled:opacity-40"
+                >
+                  {verdictLoading ? "Validating…" : "Load verdict"}
+                </button>
+              </details>
             </div>
           )}
         </Step>

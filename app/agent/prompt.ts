@@ -11,10 +11,24 @@ import { join } from "node:path";
 import { isSeverity, type Severity } from "./types";
 import { isActionType, type ActionType, type MonitoringProfile } from "../executors/types";
 
-const PROMPTS_DIR = join(process.cwd(), "agent", "prompts");
+// 프롬프트 .md 는 디스크에서 읽는다. 읽는 쪽이 어디서 실행되느냐에 따라 cwd가 달라서
+// (Next 서버는 app/, 레포 루트에서 돌린 스크립트는 c:\onchain-sentinel) 후보를 순서대로 훑는다.
+// 8/12: cwd 하나만 보고 있다가 루트에서 스크립트를 돌리자 ENOENT로 터졌다.
+const PROMPT_DIRS = [
+  join(process.cwd(), "agent", "prompts"),
+  join(process.cwd(), "app", "agent", "prompts"),
+  join(__dirname, "prompts"),
+];
 
 function readTemplate(name: string): string {
-  return readFileSync(join(PROMPTS_DIR, name), "utf-8");
+  for (const dir of PROMPT_DIRS) {
+    try {
+      return readFileSync(join(dir, name), "utf-8");
+    } catch {
+      // 다음 후보로
+    }
+  }
+  throw new Error(`prompt template not found: ${name} (looked in ${PROMPT_DIRS.join(", ")})`);
 }
 
 /**

@@ -112,8 +112,18 @@ approve는 자산을 안 움직이고 `web3/*`라 가스가 대납돼 **빈 지�
 
 **로드맵으로 미룬 것 (8/9 스코프 조정):** "판단"의 실체는 Claude가 프롬프트를 읽고 하는 것이지
 `.ts` 함수 안의 로직이 아니다(architecture.md "런타임: Claude Desktop/Code + MCP, API+서버는 로드맵").
-- [ ] diagnoser/strategist 함수 바디의 실제 Claude API 호출 — API+서버 붙일 때. 지금은 `throw` 스텁
-      유지, 반자동 데모(Phase C)는 사람이 Claude Code 세션에 프롬프트를 직접 넣는 방식으로 진행.
+- [x] **실제 Claude API 호출 (8/12 — 로드맵에서 앞당겨 구현)** — `app/agent/claude.ts`의 `askAgent()`.
+      `@anthropic-ai/sdk`, 모델 `claude-opus-5`, 응답을 `output_config.format`(json_schema)으로 강제.
+      스키마의 enum은 `ACTION_TYPES`/`SEVERITIES`를 그대로 스프레드해서 만든다 — 목록을 베끼지 않으니
+      enum이 바뀌면 스키마도 같이 바뀐다. 검증은 이중이다: 스키마가 형식을 강제하고, 그래도 어긋난 게
+      오면 `parseVerdict`가 거부한다.
+      서버 액션 `stepDiagnose`(조립→호출→검증)를 콘솔 3막에 배선 — **복사-붙여넣기 없이 버튼 하나로
+      돈다.** 수동 경로(`stepBuildPrompt`/`stepParseVerdict`)는 API 키 없는 기기용 폴백으로 `<details>`
+      안에 남겼다.
+      ⚠️ **라이브 응답은 아직 못 받았다** — 키는 유효하고 요청도 통과했는데(401 아님) 계정 크레딧이
+      0이라 400. 즉 남은 건 **콘솔에서 크레딧 충전 하나**이고 코드 문제가 아니다.
+      점검용: `node --env-file=app/.env app/node_modules/tsx/dist/cli.mjs app/scripts/check-agent.ts`
+      (온체인 조회 없이 가짜 스냅샷으로 조립→호출→검증만 태운다)
 - [ ] analyzer의 Aave v3 포지션 조회 — Sepolia Pool 컨트랙트 주소가 architecture.md에 없어서 보류
       (MVP 감시 범위 확정 여부는 "결정 대기" 참조)
 
@@ -413,3 +423,25 @@ approve는 자산을 안 움직이고 `web3/*`라 가스가 대납돼 **빈 지�
   거래소가 지원하지만 확인 안 됨), wrap을 KeeperHub 워크플로우로 태울지 개인 지갑에서 수동으로
   한 번 할지 — 여전히 §8-2 미검증 목록 그대로.
   다음 = 위 경로대로 실제 자금 확보 실행 → 확보되면 `execute()` 라이브 검증(3막) 재개.
+
+- 8/12 기기1: **에이전트가 코드에서 직접 Claude를 호출하게 만들었다** — 루프에서 사람이 끼는
+  마지막 한 칸(프롬프트를 복사해 붙여넣고 답을 다시 붙여넣기)이 사라졌다.
+  ①`app/agent/claude.ts` 신설(`askAgent`) — SDK, `claude-opus-5`, `output_config.format` json_schema.
+  ②스키마 enum을 손으로 안 적으려고 `ACTION_TYPES`(executors/types.ts)와 `SEVERITIES`(agent/types.ts)를
+  `export`로 바꿔 스프레드 — 목록이 두 벌 생기면 하나 바뀔 때 나머지가 안 바뀌는 사고가 난다
+  (`isActionType` 주석에 이미 같은 사고가 기록돼 있다).
+  ③서버 액션 `stepDiagnose` + 콘솔 3막 배선. 모델 원문(`raw`)과 소요시간을 화면에 그대로 띄운다 —
+  판정이 우리가 지어낸 게 아니라는 증거. 수동 경로는 `<details>` 폴백으로 남김.
+  ④**버그 하나 잡음**: `prompt.ts`가 프롬프트 .md를 `process.cwd()` 하나로만 찾고 있었다. 레포
+  루트에서 스크립트를 돌리면 ENOENT. 후보 경로 3개(cwd, cwd/app, `__dirname`)를 순서대로 훑도록 수정.
+  ⑤SDK 에러를 사람이 읽는 한 줄로 변환(401 / 크레딧 부족) — 데모 중 화면에 JSON 덩어리가 뜨는 걸 막는다.
+
+  **막힌 지점**: 라이브 응답 미확인. 키는 유효(401 아님), 요청 형식도 통과, **계정 크레딧 0으로 400**.
+  → 사용자가 console.anthropic.com에서 크레딧 충전하면 그대로 돈다. 코드 수정 필요 없음.
+
+  ⚠️ **보안 미해결**: 이전 세션에서 채팅에 붙여넣은 Anthropic 키는 노출된 것으로 간주해야 한다.
+  console.anthropic.com에서 **폐기 후 재발급**하고 새 키를 `app/.env`에만 넣을 것. (코드는 전부
+  `process.env.ANTHROPIC_API_KEY`만 읽는다 — 키가 파일·커밋에 들어간 곳은 없다.)
+
+  다음 = 크레딧 충전 후 3막 라이브 확인 / Base 자금 경로(임계경로) / `FlareExecutor` 배선 /
+  `docs/keeperhub-teardown.md`(README가 이미 링크 중) / 영상·제출.
