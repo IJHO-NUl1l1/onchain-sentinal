@@ -1,4 +1,4 @@
-# Sentinel
+# Onchain Sentinel
 
 **Give it a wallet address. It reads the position onchain, designs a watch for that specific
 wallet, diagnoses the risk with an LLM, and defends the position through KeeperHub.**

@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sentinel",
+  title: "Onchain Sentinel",
   description:
     "An autonomous guardian that designs and deploys a watch for your wallet, then defends it onchain.",
 };

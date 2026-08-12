@@ -6,7 +6,7 @@ export default function Home() {
     <div className="min-h-full">
       <main className="mx-auto w-full max-w-3xl px-6 py-14">
         <header className="mb-8">
-          <h1 className="text-xl font-semibold text-zinc-50">Sentinel</h1>
+          <h1 className="text-xl font-semibold text-zinc-50">Onchain Sentinel</h1>
           <p className="mt-1 text-sm text-zinc-500">
             Give it a wallet address. The agent reads the position onchain, designs the watch, diagnoses
             the risk, and defends it through KeeperHub.

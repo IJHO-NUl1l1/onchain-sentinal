@@ -1,6 +1,6 @@
 # KeeperHub integration teardown
 
-Notes from building [Sentinel](README.md) against the KeeperHub MCP server over four days. Every
+Notes from building [Onchain Sentinel](README.md) against the KeeperHub MCP server over four days. Every
 item below cost us real time and is reproducible. Where the docs already warn about something, we
 say so — several of these are documented, and the point is that documentation alone did not stop us
 from hitting them.
@@ -235,5 +235,5 @@ Not everything here is a complaint. Four things saved us more time than the item
 
 ---
 
-*Filed alongside the Sentinel submission. Every item above is reproducible; the code that works
+*Filed alongside the Onchain Sentinel submission. Every item above is reproducible; the code that works
 around them is in [`app/executors/keeperhub.ts`](app/executors/keeperhub.ts).*
