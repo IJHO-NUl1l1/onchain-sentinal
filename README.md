@@ -52,11 +52,11 @@ you should be able to check.
 > transaction list — checking the address instead of the hash makes a successful run look like
 > nothing happened.
 
-**Watches the agent generated,** both live in our KeeperHub organization, each built from a
-different wallet's onchain state rather than filled into a form:
+**A watch the agent generated,** live in our KeeperHub organization, built from the wallet's onchain
+state rather than filled into a form — hourly schedule trigger, `aave-v3/get-user-account-data` on
+network `8453`:
 
-- `sentinel-0x2b33afb068a77b103fFAF0b7d9F128209076BcE3` — id `0px5s4xgnxtcispelwgjy`
-- `sentinel-0x6Bc68c3C6d4D9B02E435dF25bBc22E59541C809c` — id `fg7jptf2rihuc6eozwydx`
+- `sentinel-0x6Bc68c3C6d4D9B02E435dF25bBc22E59541C809c` — id `r6zhrb1yc7fgr7pre8oe3`
 
 **Execution wallet** (Turnkey EOA, provisioned by KeeperHub):
 [`0x2b33afb068a77b103fFAF0b7d9F128209076BcE3`](https://basescan.org/address/0x2b33afb068a77b103fFAF0b7d9F128209076BcE3)
@@ -82,8 +82,7 @@ Two things here don't:
 
 **The watch is designed, not filled in.** A template is a form: you pick the asset, you type the
 threshold, you enable it. Sentinel reads the wallet first and generates the workflow from what it
-finds. The two workflows listed above were produced for two different addresses without anyone
-choosing a parameter.
+finds. The workflow above was produced from an address alone, with nobody choosing a parameter.
 
 **The response is a judgment, bounded in code.** A template runs `if HF < 1.5 then repay`. Sentinel
 hands live data to a language model and takes back a decision — but the decision is only allowed to
@@ -104,17 +103,19 @@ never sanctioned.
 ## KeeperHub surfaces used
 
 **MCP server** — the agent talks to KeeperHub over MCP (`@modelcontextprotocol/sdk`, streamable
-HTTP). `create_workflow` deploys the watch, `execute_protocol_action` and `execute_workflow` run
-actions, `get_execution` reads results back. See `app/executors/keeperhub.ts`.
+HTTP). `create_workflow` deploys the watch and `execute_protocol_action` runs the response. See
+`app/executors/keeperhub.ts`.
 
 **Workflow builder** — watches are created as real workflows with trigger and action nodes, so they
 appear and run in KeeperHub like any hand-built one.
 
-**Audit trail** — `get_execution` is what we verify against, and it is the strongest observability
-surface here. It returns per-node status, timings, and `transactionHashes[]` with `verified: true`
-and `receiptStatus` reconciled against the onchain receipt. The tool's own contract is explicit
-that triggering is not completion, so the console polls it rather than trusting the trigger
-acknowledgement.
+**Audit trail** — `get_execution` is the strongest observability surface here: per-node status,
+timings, and `transactionHashes[]` with `verified: true` and `receiptStatus` reconciled against the
+onchain receipt. We used it through the MCP tools to confirm the proof transaction, because
+`execute_workflow` returns only `{executionId, status: "running"}` — triggering is not completion.
+The shipped executor takes the direct path (`execute_protocol_action`), which returns the
+transaction link synchronously, so it does not poll; wiring the workflow path through `get_execution`
+is the natural next step and is not done.
 
 **Gas sponsorship** — the proof transaction above ran on an empty wallet. The execution response
 reports `sponsored: true`, and it cost 117,664 gas at 0.006 gwei, about **$0.003**.
@@ -135,9 +136,9 @@ re-running the demo against the same wallet doesn't stack duplicate watches. Reh
               │
    ┌──────────▼────────────────────┐
    │  Agent                        │
-   │   analyzer  → reads the chain │
-   │   prompt    → assembles + validates
-   │   strategist→ picks from the enum
+   │   analyzer → reads the chain  │
+   │   prompt   → assembles + validates
+   │   claude   → the judgment call
    └──────────┬────────────────────┘
               │  Executor interface — the only thing the agent knows
      ┌────────┴────────┐
