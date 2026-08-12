@@ -513,3 +513,15 @@ approve는 자산을 안 움직이고 `web3/*`라 가스가 대납돼 **빈 지�
   ②**Claude Code의 OAuth MCP 세션은 쓰기에서 401**(읽기는 정상). 조직 키(`kh_`)로 붙으면 즉시 성공.
     401 본문에 스코프 얘기가 없어서 세션 만료로 오인하기 쉽다.
     → 앞으로 워크플로우 쓰기 작업은 `KEEPERHUB_API_KEY` 경로로 할 것.
+
+- 8/12 기기1(7): **DoraHacks 제출 폼 실물 확인 → 몰랐던 필수 항목 다수 발견**(사용자 스크린샷).
+  탭 5개: Profile / Details / Team / Contact / Submission. Profile 탭만으로도 필수가 이만큼:
+  - BUIDL name *  → "Sentinel"
+  - **BUIDL logo *** → JPEG/PNG, 2MB 미만, 480×480 권장 ← **없던 요구사항. `assets/logo.png` 생성함**
+    (방패 + 헬스팩터 반등선, 콘솔과 동일 팔레트 #0a0a0a/#e4e4e7/#10b981. 원본은 `assets/logo.svg`)
+  - Vision * (해결하는 문제) / Category * → Crypto / Web3
+  - GitHub URL * / **Demo video *** (YouTube 권장, 임베드 플레이어로 표시 → **유튜브 업로드 필요**)
+  - **Social links 최소 1개 필수*** ← 팀/개인 소셜 계정 없으면 제출 자체가 막힘
+  ⚠️ **여전히 미확인(사용자)**: ①브랜치 URL(`/tree/submission/keeperhub`)이 GitHub 필드 검증을
+    통과하는가 — 단일 레포+브랜치동결 전략 전체의 전제 ②나머지 4개 탭의 필수 항목
+    ③소셜 계정 확보 가능 여부
