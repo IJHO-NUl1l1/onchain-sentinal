@@ -492,3 +492,12 @@ approve는 자산을 안 움직이고 `web3/*`라 가스가 대납돼 **빈 지�
   "Nothing to execute"로 바꾸고 실행 폼 대신 "Transactions sent: 0"을 명시하도록 수정.
   "판정이 무행동인 것은 실패가 아니라 결과"라는 문구도 넣었다.
   금액 placeholder도 자산별로 분기(WETH 선택인데 `100000`이 떠 있으면 1e-13 WETH라 함정).
+
+- 8/12 기기1(5): **콘솔 다크 고정 + 배경 이음매 제거.**
+  ①`globals.css`가 `:root`를 흰색으로 두고 다크 값을 `prefers-color-scheme`에만 걸어놨었다
+    → 심사위원/촬영 기기의 OS 설정이 라이트면 화면이 통째로 뒤집힌다. 분기를 없애고 다크로 고정,
+    `color-scheme: dark`로 스크롤바·폼 컨트롤까지 맞춤. `layout.tsx`에 `viewport.colorScheme`/
+    `themeColor`도 추가(브라우저 UI까지).
+  ②배경이 `body`에만 칠해져 있어서 본문이 짧을 때 그 아래로 브라우저 기본 캔버스가 드러나
+    **가로 경계선**이 생겼다(사용자 스크린샷에서 발견) → `html, body` 양쪽에 칠함.
+  컴파일된 CSS에서 `color-scheme: dark`와 `html, body{background:var(--background)}` 확인 완료.

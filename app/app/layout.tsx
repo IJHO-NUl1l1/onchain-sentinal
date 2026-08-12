@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -16,6 +16,12 @@ export const metadata: Metadata = {
   title: "Sentinel",
   description:
     "An autonomous guardian that designs and deploys a watch for your wallet, then defends it onchain.",
+};
+
+// 다크 고정 — 브라우저 UI(주소창 등)까지 맞추고, 시스템 설정을 따라가지 않게 한다.
+export const viewport: Viewport = {
+  colorScheme: "dark",
+  themeColor: "#0a0a0a",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

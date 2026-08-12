@@ -1,8 +1,11 @@
 @import "tailwindcss";
 
+/* 이 콘솔은 다크 고정이다. 시스템 설정을 따라가면 발표 중에 화면이 뒤집힐 수 있어
+   prefers-color-scheme 분기를 두지 않는다. color-scheme:dark는 스크롤바·폼 컨트롤까지 맞춘다. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -12,16 +15,15 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* 배경을 html까지 칠한다. body에만 칠하면 본문이 짧을 때 그 아래로 브라우저 기본 캔버스가
+   드러나 가로 경계선이 생긴다(8/12 스크린샷에서 발견). */
+html,
 body {
   background: var(--background);
   color: var(--foreground);
+}
+
+body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
