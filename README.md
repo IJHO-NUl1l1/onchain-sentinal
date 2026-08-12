@@ -224,5 +224,5 @@ rejecting direct execution with a 501, gas sponsorship applying per action famil
 execution method, `referralCode` being rejected as missing while the schema calls it optional, and
 Aave v3 failing on an unsupported chain with an empty revert instead of saying so.
 
-They're written up with reproductions and suggested fixes in
-[`docs/keeperhub-teardown.md`](docs/keeperhub-teardown.md).
+They're written up with reproductions and suggested fixes — along with the four surfaces that saved
+us more time than these cost — in [`KEEPERHUB-TEARDOWN.md`](KEEPERHUB-TEARDOWN.md).
