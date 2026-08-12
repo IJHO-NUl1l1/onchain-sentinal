@@ -173,7 +173,39 @@ return `aave-v3 is not available on network 11155111`.
 
 ---
 
-## 10. Strict EIP-55 checksums on recipient addresses
+## 10. `list_workflows` returns soft-deleted workflows
+
+`delete_workflow` is a soft delete: it sets `deletedAt` and returns `{ "success": true }`. But
+`list_workflows` keeps returning those rows, `deletedAt` populated and `enabled` still `true`.
+
+We deleted two obsolete watches, listed to confirm, and saw them still there — which reads exactly
+like a delete that silently failed. Only fetching `get_workflow` and reading `deletedAt` showed the
+delete had worked.
+
+**Suggested fix.** Filter soft-deleted rows out of `list_workflows` by default, and add an
+`includeDeleted` flag for callers who want them. Any client that lists and counts is otherwise
+wrong, and the natural verification step after a delete reports the opposite of the truth.
+
+---
+
+## 11. Writes 401 on the OAuth MCP session while reads succeed
+
+Connected through the MCP OAuth flow, `list_workflows` and `get_workflow` work, but
+`delete_workflow` returns a bare `401 Unauthorized`. The same operation with an organization
+`kh_` key over streamable HTTP succeeds immediately.
+
+The 401 body carries nothing but `{"error":"Unauthorized"}` — no mention of a missing scope or of
+which credential would work. Since reads on the same session are fine, the natural conclusion is an
+expired session rather than a permission boundary, and that sends you to re-authenticate instead of
+switching credentials.
+
+**Suggested fix.** Return `403` with the required scope named. A message like
+`delete_workflow requires mcp:write; this session is read-only` turns a debugging detour into a
+one-line fix.
+
+---
+
+## 12. Strict EIP-55 checksums on recipient addresses
 
 Mixed-case addresses whose checksum does not validate are rejected with `Invalid recipient address`.
 Correct in principle — but copying an address out of a log that lowercased it, then "fixing" the

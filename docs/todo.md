@@ -501,3 +501,15 @@ approve는 자산을 안 움직이고 `web3/*`라 가스가 대납돼 **빈 지�
   ②배경이 `body`에만 칠해져 있어서 본문이 짧을 때 그 아래로 브라우저 기본 캔버스가 드러나
     **가로 경계선**이 생겼다(사용자 스크린샷에서 발견) → `html, body` 양쪽에 칠함.
   컴파일된 CSS에서 `color-scheme: dark`와 `html, body{background:var(--background)}` 확인 완료.
+
+- 8/12 기기1(6): **Sepolia 감시망 2개 삭제 완료** (`0px5s4xgnxtcispelwgjy`, `fg7jptf2rihuc6eozwydx`
+  — 한국어 설명이라 CLAUDE.md 언어 규칙 위반이었고 매시간 Sepolia를 조회 중이었음).
+  → 이제 **활성 감시망 = Base 두 개**(`r6zhrb1y…`=0x6Bc68c…, `uaovii0h…`=0x2b33…), 한국어 설명 0건.
+  README도 감시망 두 개로 복구하고 "서로 다른 지갑 두 개" 차별화 문구 되살림.
+  **삭제하다 함정 2개 새로 발견 → teardown에 10·11번으로 추가:**
+  ①`delete_workflow`는 소프트 삭제인데 **`list_workflows`가 삭제된 것도 계속 돌려준다**
+    (`deletedAt` 채워진 채 `enabled:true`). 삭제 후 목록으로 확인하면 "삭제 실패"로 보인다.
+    `get_workflow`의 `deletedAt`을 봐야 진위를 안다.
+  ②**Claude Code의 OAuth MCP 세션은 쓰기에서 401**(읽기는 정상). 조직 키(`kh_`)로 붙으면 즉시 성공.
+    401 본문에 스코프 얘기가 없어서 세션 만료로 오인하기 쉽다.
+    → 앞으로 워크플로우 쓰기 작업은 `KEEPERHUB_API_KEY` 경로로 할 것.

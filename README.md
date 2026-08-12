@@ -52,11 +52,12 @@ you should be able to check.
 > transaction list — checking the address instead of the hash makes a successful run look like
 > nothing happened.
 
-**A watch the agent generated,** live in our KeeperHub organization, built from the wallet's onchain
-state rather than filled into a form — hourly schedule trigger, `aave-v3/get-user-account-data` on
-network `8453`:
+**Watches the agent generated,** both live in our KeeperHub organization and both built from a
+wallet's onchain state rather than filled into a form — hourly schedule trigger,
+`aave-v3/get-user-account-data`, network `8453`:
 
 - `sentinel-0x6Bc68c3C6d4D9B02E435dF25bBc22E59541C809c` — id `r6zhrb1yc7fgr7pre8oe3`
+- `sentinel-0x2b33afb068a77b103fFAF0b7d9F128209076BcE3` — id `uaovii0ha77nknkfqhjaz`
 
 **Execution wallet** (Turnkey EOA, provisioned by KeeperHub):
 [`0x2b33afb068a77b103fFAF0b7d9F128209076BcE3`](https://basescan.org/address/0x2b33afb068a77b103fFAF0b7d9F128209076BcE3)
@@ -82,7 +83,8 @@ Two things here don't:
 
 **The watch is designed, not filled in.** A template is a form: you pick the asset, you type the
 threshold, you enable it. Sentinel reads the wallet first and generates the workflow from what it
-finds. The workflow above was produced from an address alone, with nobody choosing a parameter.
+finds. The two workflows above were produced for two different addresses, with nobody choosing a
+parameter for either.
 
 **The response is a judgment, bounded in code.** A template runs `if HF < 1.5 then repay`. Sentinel
 hands live data to a language model and takes back a decision — but the decision is only allowed to
