@@ -151,7 +151,7 @@ The body of the system knows `provisionMonitoring()` and `execute()` and nothing
 drives a second execution engine — an onchain contract on Flare — without the agent changing.
 
 ```
-app/agent/       analyzer, prompt assembly + verdict validation, prompt templates
+app/agent/       analyzer, prompt assembly, the Claude call, verdict validation, templates
 app/executors/   Executor interface, KeeperHub adapter, Flare adapter
 app/app/         run console (_components) and its server actions (_actions)
 app/scripts/     repeatable demo runners and the onchain reserve verifier
@@ -162,13 +162,13 @@ contracts/       SentinelVault.sol — the Flare track, deployed on Coston2
 
 ## What is honest about this build
 
-**Diagnosis is relayed by hand, and the relay is the only manual part.** `diagnoser.ts` and
-`strategist.ts` are stubs; wiring the Claude API is roadmap, not done. What is *not* manual is
-everything around it: `buildAgentPrompt()` assembles the complete prompt from the templates and the
-live data, and `parseVerdict()` validates what comes back. An operator copies one finished string
-into Claude and pastes one JSON answer back. Replacing that copy-paste with an API call changes no
-other line — which is precisely why we built the assembly and validation in code instead of doing
-them by hand and claiming the same thing.
+**The judgment step is a real API call, and the enum is enforced twice.** `buildAgentPrompt()`
+assembles the prompt from the templates and the live position, `askAgent()` sends it to Claude, and
+`parseVerdict()` validates what comes back — one server action, one button. The response schema
+builds its `action` enum by spreading the same constant the executor maps from, so the schema cannot
+drift from the code; a verdict naming anything outside it is rejected before execution is reachable.
+A copy-paste path is still in the UI behind a disclosure, for running the demo on a machine with no
+API key.
 
 **Defense is limited to the wallet KeeperHub can sign for.** Monitoring works for any address you
 type in — the two generated watches prove that. Acting on a position requires being that position's
@@ -199,6 +199,7 @@ npm run dev --prefix app
 KEEPERHUB_API_KEY=kh_...                  # organization key, used for MCP over HTTP
 KEEPERHUB_EXECUTOR_ADDRESS=0x...          # the Turnkey wallet; Aave actions need it as onBehalfOf
 KEEPERHUB_DEV_CHAIN_ID=8453               # Base. Aave v3 actions are not available on Sepolia
+ANTHROPIC_API_KEY=sk-ant-...               # the diagnosis step; without it, use the manual fallback
 ```
 
 Headless runs of the same pipeline:

@@ -94,7 +94,7 @@ approve는 자산을 안 움직이고 `web3/*`라 가스가 대납돼 **빈 지�
 ## Phase B — 공유 뼈대 (8/7-8/9, 압축) 🟢
 
 - [x] **⛔ 레포 구조 결정 (선행)** (8/8) — `app/` 안에 통합 (Next 스캐폴드와 같은 프로젝트, `@/*` 별칭 사용):
-      `app/agent/`(analyzer·diagnoser·strategist·types·prompts/), `app/executors/`(types·keeperhub·flare),
+      `app/agent/`(analyzer·prompt·claude·types·prompts/), `app/executors/`(types·keeperhub·flare),
       `app/lib/`(공용, 아직 빈 상태). `contracts/`는 Phase D까지 별개 그대로.
 - [x] Next.js 대시보드 골격 (지갑 주소 등록 / 로그 뷰) (8/9) — UI만, 백엔드 미연결.
       `_components/guard-panel.tsx`(방패 아이콘, 감시 상태 표시 + 지갑 입력) + `log-table.tsx`(플레이스홀더 로그).
@@ -445,3 +445,18 @@ approve는 자산을 안 움직이고 `web3/*`라 가스가 대납돼 **빈 지�
 
   다음 = 크레딧 충전 후 3막 라이브 확인 / Base 자금 경로(임계경로) / `FlareExecutor` 배선 /
   `docs/keeperhub-teardown.md`(README가 이미 링크 중) / 영상·제출.
+
+- 8/12 기기1(이어서): **주석 최소화 + 죽은 스텁 삭제.** 주석이 변경이력처럼 쌓여 있어서
+  (날짜·페이즈번호·문서 섹션 포인터·아랫줄 재서술) 핵심 로직이 오히려 안 보이던 걸 정리.
+  19개 파일에서 주석 213줄 → 82줄. **남긴 기준 = 코드만 봐서 복원 불가능한 것**(KeeperHub가
+  실패를 성공 봉투 안에 담아 준다 / 스키마상 optional인데 빠지면 거부되는 필드 / cancun 필수 /
+  빠른 피드라 gas 자동견적이 빗나간다 / 파싱 실패를 성공으로 보고하지 않는 이유 / Solidity enum과
+  TS ActionType 순서 일치) + 모듈당 "이게 무엇인가" 한 줄.
+  `app/agent/diagnoser.ts`·`strategist.ts` **삭제** — 어디서도 import 안 되는 죽은 스텁인데
+  `claude.ts`가 생기면서 주석 내용까지 거짓이 됐고, 심사위원이 소스를 열었을 때 에이전트 핵심
+  함수가 `not implemented`로 보이는 게 손해라 판단. 둘만 쓰던 `Diagnosis`/`Strategy` 타입도 같이 제거.
+  (프롬프트 `.md` 두 개는 `prompt.ts`가 계속 읽으므로 유지)
+  README의 "diagnosis is relayed by hand" 단락을 실제 동작(API 호출 + enum 이중 강제)에 맞게
+  다시 씀 — 제출 서면이라 거짓 진술이 남으면 안 됨. `ANTHROPIC_API_KEY`도 env 목록에 추가.
+  검증: `next build` 통과, 컨트랙트 `solc 0.8.25 (evm target: cancun)` 컴파일 통과
+  (이 기기에 `contracts/node_modules`가 없어서 설치부터 함 — 두 기기 세팅 항목 그거).

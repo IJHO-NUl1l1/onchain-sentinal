@@ -385,7 +385,7 @@ Block Latency Feed는 매 블록(~1.8초)마다 갱신되는데, ethers의 자�
 | 파트 | 소속 | 비고 |
 |---|---|---|
 | [Next.js] Dashboard | 🟢 | 한 벌 |
-| [Agent] analyzer/diagnoser/strategist + prompts | 🟢 | 알맹이 |
+| [Agent] analyzer / prompt 조립·검증 / Claude 호출 + prompts | 🟢 | 알맹이 |
 | [Backend] 몸통 + Executor 인터페이스 | 🟢 | |
 | [Backend] KeeperHubExecutor | 🔵 | ~150줄 |
 | [Backend] FlareExecutor | 🟠 | ~150줄 |
