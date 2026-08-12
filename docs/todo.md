@@ -479,3 +479,16 @@ approve는 자산을 안 움직이고 `web3/*`라 가스가 대납돼 **빈 지�
     루트 CLAUDE.md가 규칙 파일인데 하위에 또 생기면 지시가 갈려서 `next.config.ts`에
     `agentRules: false`로 끄고 두 파일 삭제. dev 재기동해도 다시 안 생기는 것 확인.
   ✅ 키 교체 확인 — 유출된 옛 키는 `app/.env`에 없고, `.env`는 gitignore 대상이며 커밋 이력 없음.
+
+- 8/12 기기1(4): 사용자가 UI로 1~3막 실행 성공(스크린샷 확인). 3막 7694ms, severity/action/
+  rationale + 라벨 설명까지 정상 렌더. 근거에 나머지 6개 액션 배제 추론이 다 들어있어 데모용으로 충분.
+  **부수 성과**: 그 실행이 곧 Base로 `provisionMonitoring`을 돌린 것이라 워크플로우
+  `uaovii0ha77nknkfqhjaz`(0x2b33…, network 8453, 영어 설명)가 새로 생성됐다.
+  → **Base+영어 감시망이 두 개가 됐다**(`r6zhrb1y…`=0x6Bc68c…, `uaovii0h…`=0x2b33…).
+    README의 "서로 다른 지갑 두 개" 차별화 논지를 원래대로 복구 가능. 내가 임의 생성 안 하길 잘했음.
+  **발견한 UI 결함(수정함)**: 판정이 `NO_ACTION`인데 4막이 "Execute NO_ACTION" 버튼 + 자산·금액
+  입력을 그대로 띄우고 있었다. 누르면 executor가 단락시켜 tx 없이 초록 성공이 떠서, 심사위원에겐
+  "실행했다는데 트랜잭션이 없다"로 보인다. → `NO_ACTION`/`INCREASE_MONITORING`이면 4막 제목을
+  "Nothing to execute"로 바꾸고 실행 폼 대신 "Transactions sent: 0"을 명시하도록 수정.
+  "판정이 무행동인 것은 실패가 아니라 결과"라는 문구도 넣었다.
+  금액 placeholder도 자산별로 분기(WETH 선택인데 `100000`이 떠 있으면 1e-13 WETH라 함정).

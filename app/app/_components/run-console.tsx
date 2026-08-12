@@ -306,6 +306,10 @@ export function RunConsole() {
     setTimeout(() => setCopied(false), 1500);
   }
 
+  // KeeperHubExecutor.execute()가 트랜잭션 없이 단락시키는 액션들. 여기 목록이 executor와
+  // 어긋나면 화면과 실제 동작이 갈리므로, 바꿀 땐 executors/keeperhub.ts와 같이 고쳐야 한다.
+  const needsNoTransaction = verdict?.action === "NO_ACTION" || verdict?.action === "INCREASE_MONITORING";
+
   // 3막 기본 경로 — 조립·호출·검증이 서버에서 한 번에 돈다.
   async function runDiagnose() {
     if (!profile || !snapshot) return;
@@ -553,16 +557,36 @@ export function RunConsole() {
       {verdict?.action && (
         <Step
           index={4}
-          title="Execute it onchain"
-          subtitle="KeeperHub submits the transaction and Turnkey signs it inside a secure enclave. No human key, no wallet popup."
-          status={exec.status}
-          durationMs={exec.ms}
-          rows={exec.rows}
-          raw={exec.raw}
+          title={needsNoTransaction ? "Nothing to execute" : "Execute it onchain"}
+          subtitle={
+            needsNoTransaction
+              ? "The agent judged this position safe, so no transaction is sent. A guardian that acts anyway is a guardian that costs you money."
+              : "KeeperHub submits the transaction and Turnkey signs it inside a secure enclave. No human key, no wallet popup."
+          }
+          status={needsNoTransaction ? "success" : exec.status}
+          durationMs={needsNoTransaction ? undefined : exec.ms}
+          rows={
+            needsNoTransaction
+              ? [
+                  {
+                    label: "Verdict",
+                    value: verdict.action,
+                    strong: true,
+                    hint: "This action is resolved off-chain — it maps to no KeeperHub call.",
+                  },
+                  {
+                    label: "Transactions sent",
+                    value: "0",
+                    hint: "Deciding not to act is a real outcome, not a failure to run.",
+                  },
+                ]
+              : exec.rows
+          }
+          raw={needsNoTransaction ? undefined : exec.raw}
           rawLabel="Raw response from KeeperHub"
-          error={exec.err}
+          error={needsNoTransaction ? undefined : exec.err}
         >
-          {exec.status !== "success" && (
+          {!needsNoTransaction && exec.status !== "success" && (
             <div className="mt-4 flex flex-wrap items-end gap-2">
               <div>
                 <label className="text-[11px] text-zinc-500">Asset</label>
@@ -580,7 +604,7 @@ export function RunConsole() {
                 <input
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  placeholder="100000"
+                  placeholder={asset === BASE_USDC ? "100000  (= 0.1 USDC)" : "10000000000000000  (= 0.01 WETH)"}
                   className="mt-1 w-full rounded border border-zinc-800 bg-zinc-950 px-2 py-1.5 font-mono text-[11px] text-zinc-300 outline-none focus:border-emerald-500/50"
                 />
               </div>
