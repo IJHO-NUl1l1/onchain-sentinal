@@ -427,7 +427,13 @@ Block Latency Feed는 매 블록(~1.8초)마다 갱신되는데, ethers의 자�
 
 ---
 
-## 8. 일정 (KeeperHub 8/13 19:00 / Flare 8/15 04:59, 간극 ~34h)
+## 8. 일정 (KeeperHub 8/13 19:00 / Flare 8/14, 시각 미표기)
+
+> **8/13 정정**: "Flare 8/15 04:59"는 출처를 못 찾은 값이었다. 실제 공고("Flare Summer Signal")엔
+> **"August 14 Final submission deadline"**만 있고 시각·타임존 표기가 없다 — 하루 당겨졌다고 보고
+> 움직인다. 이 공고는 바운티제(Interoperable Asset Products / Confidential Compute Apps, 복수
+> 선택 가능)라는 것도 이번에 처음 확인됨 — 아래 일정표의 "~8/15 04:59"는 참고만 하고 실제로는
+> 8/14 안에 끝내는 걸 목표로 한다.
 
 **8/6 개정, 8/9 갱신.** 원안(D1=8/2, 14일 계획) 대비 8/6 시점에 3~4일 지연이 있었으나,
 아래 D3-5 압축안대로 Phase A·B를 8/9에 마쳐 흡수했다 (진행상황은 docs/todo.md).
