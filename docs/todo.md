@@ -610,6 +610,25 @@ approve는 자산을 안 움직이고 `web3/*`라 가스가 대납돼 **빈 지�
   Base(8453) 감시망 2개만 `enabled=true` — `r6zhrb1yc7fgr7pre8oe3`(0x6Bc68c…),
   `uaovii0ha77nknkfqhjaz`(0x2b33af…). 나머지는 전부 비활성. 한국어 설명 0건.
 
+- 8/12 기기1(10): **Vercel 배포 준비.**
+  ①**Root Directory = `app`** 로 지정해야 한다(Settings→General). 루트에 `app/`(Next)과
+    `contracts/`(Hardhat)가 별개 프로젝트로 있어서 루트를 주면 빌드 자체가 안 된다.
+  ②**⚠️ 안 하면 배포판에서만 3막이 깨지는 함정 하나 수정함**: `prompt.ts`가 프롬프트 `.md`를
+    런타임 `readFileSync`로 읽는데 경로를 문자열로 조립해서 Next의 정적 추적이 못 본다
+    → 서버리스 번들에서 누락. `next.config.ts`에 `outputFileTracingIncludes`로 명시 포함.
+    **로컬에선 디스크에 파일이 있어 멀쩡히 돌기 때문에 배포 후에야 터진다.**
+    검증: 빌드 후 `app/.next/server/app/page.js.nft.json`에 `diagnoser.md`가 들어간 것 확인.
+  ③**환경변수 5종을 Vercel에 등록해야 한다** — `ANTHROPIC_API_KEY`, `KEEPERHUB_API_KEY`,
+    `KEEPERHUB_EXECUTOR_ADDRESS`, `KEEPERHUB_DEV_CHAIN_ID=8453`, (Flare 쓰면)`DEPLOYER_PRIVATE_KEY`,
+    `COSTON2_RPC_URL`. `.env`는 커밋 안 되므로 대시보드에 직접 넣는 수밖에 없다.
+  ④**⚠️ 보안 판단 필요 — 공개 URL은 곧 남이 우리 돈을 쓰는 버튼이다.** 서버 액션에 인증이 없어서
+    URL을 아는 누구나 ⓐClaude 크레딧 소모 ⓑKeeperHub 워크플로우 생성 ⓒAave 액션 실행(가스)
+    ⓓFlare tx 서명을 시킬 수 있다. 심사용으로 링크를 낸다면 최소한:
+    - `DEPLOYER_PRIVATE_KEY`는 **등록하지 말 것**(콘솔 UI는 KeeperHub 고정이라 Flare 없이도 돈다)
+    - 데모 후 Anthropic 키 회수 또는 지출 한도 설정
+    - 또는 배포를 아예 하지 않고 영상+로컬 실행으로 제출(제출 요건에 배포 URL은 필수 아님.
+      폼의 "Project website"는 optional)
+
 - 8/13 기기2 — **KeeperHub 트랙 실질적으로 마감.** Base 자금 확보부터 촬영까지 한 세션에 끝남.
 
   **① Aave 쓰기가 프로젝트 최초로 실전 성공.** WETH 0.014개를 supply → HF를 2.0으로 착지 →
