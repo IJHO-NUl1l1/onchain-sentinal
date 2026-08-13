@@ -13,6 +13,25 @@ import type { Action, Executor, MonitoringProfile, ProvisionResult, TxResult } f
 
 const VAULT_ADDRESS = "0xBf5778109e894b7C093D91B8a7518c95Fe74c3EF";
 const EXPLORER = "https://coston2-explorer.flare.network";
+// Throwaway verifier contract — reads any FTSO feed via ContractRegistry.getTestFtsoV2(),
+// the same path SentinelVault.sol uses. Free (view), used to watch deviation without
+// spending a real checkAndExecute transaction on every poll.
+const FEED_CHECK_ADDRESS = "0x93D3cC7C2F340E7eeB5957dd7859b57fbd6cc75c";
+export const XRP_USD_FEED_ID = "0x015852502f55534400000000000000000000000000";
+
+const feedCheckAbi = [
+  {
+    type: "function",
+    name: "read",
+    stateMutability: "view",
+    inputs: [{ name: "feedId", type: "bytes21" }],
+    outputs: [
+      { name: "value", type: "uint256" },
+      { name: "decimals", type: "int8" },
+      { name: "timestamp", type: "uint64" },
+    ],
+  },
+] as const;
 
 // "FLR/USD" (21바이트 feed id). architecture.md §3 확정값.
 const FLR_USD_FEED_ID = "0x01464c522f55534400000000000000000000000000";
@@ -223,6 +242,18 @@ export async function readPolicy(user: string): Promise<{ feedId: string; anchor
     args: [user as Hex],
   });
   return { feedId: raw[0], anchorPrice: raw[1].toString(), thresholdBips: raw[2].toString(), isLocked: raw[3] };
+}
+
+/** Free view read of the live FTSO price via FeedCheck.sol — same source SentinelVault reads internally. */
+export async function readLivePrice(feedId: string): Promise<{ value: string; decimals: number }> {
+  const { pub } = clients();
+  const [value, decimals] = await pub.readContract({
+    address: FEED_CHECK_ADDRESS,
+    abi: feedCheckAbi,
+    functionName: "read",
+    args: [feedId as Hex],
+  });
+  return { value: value.toString(), decimals };
 }
 
 export interface PolicyState {

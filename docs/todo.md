@@ -32,46 +32,37 @@ approve는 자산을 안 움직이고 `web3/*`라 가스가 대납돼 **빈 지�
 → 공고 제출 요건 *"a transaction your agent executed via KeeperHub"*는 **이미 충족된 상태**다.
    Aave 자금이 끝내 안 와도 제출 자체는 성립한다.
 
-## ▶ 다음 기기가 할 일 (8/12 17:00 기준, 우선순위 순)
+## ▶ 다음 기기가 할 일 (8/14 심야 기준, 우선순위 순)
 
-> **먼저 읽을 것**: 이 섹션 → 아래 "🔒 확정된 결정" → 작업 로그 맨 아래 8/12 항목들.
-> **환경 세팅**은 `/CLAUDE.md`의 "두 기기 개발" 참조. `app/.env`에 이제 **키가 4종** 필요하다
-> (`ANTHROPIC_API_KEY`, `KEEPERHUB_API_KEY`, `KEEPERHUB_EXECUTOR_ADDRESS`, `DEPLOYER_PRIVATE_KEY`
-> +`COSTON2_RPC_URL`). git으로 안 넘어오니 직접 채워야 한다.
+> **먼저 읽을 것**: 이 섹션 → 작업 로그 맨 아래 "8/13~14 기기2 (마라톤 세션)" 항목 →
+> architecture.md §8-3(Flare 전체 계획·근거).
+> **환경 세팅**은 `/CLAUDE.md`의 "두 기기 개발" 참조. `app/.env`에 **키가 5종** 필요하다
+> (`ANTHROPIC_API_KEY`, `KEEPERHUB_API_KEY`, `KEEPERHUB_EXECUTOR_ADDRESS`,
+> `KEEPERHUB_DEV_CHAIN_ID=8453`, `DEPLOYER_PRIVATE_KEY`, `COSTON2_RPC_URL`). git으로 안 넘어오니
+> 직접 채워야 한다.
 
-**✅ 8/13: Base 자금·라이브 4~5막·촬영까지 전부 끝남.** 아래 1~3은 해소, 남은 임계경로는 4~6뿐이다.
+**✅ KeeperHub 트랙 — 코드·검증·촬영 전부 완료.** README·teardown 정비까지 끝남.
+**⚠️ 단, 실제로 DoraHacks 폼에서 "제출" 버튼을 눌렀는지 이 세션에서 확답을 못 받았다 — 제일 먼저
+확인할 것.** 안 눌렸으면 그게 최우선(마감 8/13 19:00은 이미 지났을 수 있음, 확인 필요).
 
-1. ~~Base 자금~~ — 완료. WETH 담보 공급, HF를 2.0/1.3/1.1로 반복 착지시켜가며 agent 실제 판단
-   3종(NO_ACTION/INCREASE_MONITORING/SUPPLY_COLLATERAL) 전부 실측, `SUPPLY_COLLATERAL` 실행까지
-   실제 tx로 검증됨 — README Proof 섹션 참조
-2. ~~4~5막 라이브~~ — 완료. approve→supply→borrow(raw MCP call)→execute→재조회, 전부 실제 tx
-3. ~~데모 영상 촬영~~ — 완료. 원테이크, 최종 tx `0x96f23506…`, 편집 없음(합의된 방침)
+**✅ Flare 트랙 — 컨트랙트/코드/라이브 검증/웹 UI까지 다 됨.** 남은 건 촬영·문서·제출뿐:
 
-**⛔ 남은 것 — 사용자만 할 수 있는 것:**
-4. **소셜 링크 1개** — DoraHacks 제출 폼 필수(`*`). **없으면 제출 자체가 불가능하다.**
-5. **데모 영상 → YouTube 업로드** — 폼이 링크만 받는다(파일 첨부 아님).
-6. **브랜치 URL 검증** — 제출 폼 GitHub 칸에 `/tree/submission/keeperhub` 형식이 통과하는지.
-   단일 레포+브랜치동결 전략 전체의 전제다(§8-1). 거부되면 전략을 바꿔야 한다.
-7. **나머지 4개 탭**(Details/Team/Contact/Submission) 필수 항목 확인.
+1. [ ] **`/flare` 콘솔 2~5막을 브라우저에서 직접 클릭해서 검증** — 1막(Deploy watch)만
+   렌더링 확인했고, 그 이후(특히 "Watch live price" 3초 폴링, threshold 진입 감지)는
+   코드만 짜두고 실제 클릭 테스트를 못 했다. `npm run dev --prefix app` → `localhost:3000/flare`
+2. [ ] **Flare 데모 영상 촬영** — 콘솔 완성됐으니 KeeperHub 때처럼 큐카드 짜서 진행.
+   자산은 C2FLR뿐(실자금 불필요), 이미 확보돼 있음(100개, 8/8 파우셋)
+3. [ ] **`submission/flare` 브랜치용 README 신규 작성** — architecture.md §8-3 내용 기반,
+   "①FTSOv2 실데이터 ②회색지대만 Claude가 판단" 두 축 중심(CLAUDE.md 규칙, 영어로)
+4. [ ] **`submission/flare` 브랜치 동결 + 태그, 제출**
 
-**🟢 지금 하는 것**: README·teardown 정비 → 신규 스크립트 커밋 → `submission/keeperhub` 브랜치
-동결+태그 → **마감 기다리지 말고 제출**.
+**🔒 8/13(2) 확정 — Confidential Compute Apps 바운티는 포기.** Interoperable Asset Products
+하나만 지원. 이유·조사 내용은 architecture.md §8-3 "트랙 B" 참조. 다시 논의하지 말 것.
 
-**다음(8/13~15)**: 🟠 Flare README(신규 작성) + 영상 (+여유 시 `offerIncentive`) →
-`submission/flare` 동결 → 제출.
-
-**🔒 8/10 확정된 결정 (다시 논의하지 말 것):**
-- 데모 포지션 = **WETH 담보 + USDC 차입**, **Base 메인넷(8453)**. 목표 HF 2.0 / 정책 임계값 2.5
-- **Sepolia 폴백 폐기.** Aave v3 액션이 Sepolia 미지원이고 테스트넷 우회는 안 하기로 함
-  → 자금 도착이 **임계경로**. 안 오면 Aave 실행 장면 자체가 불가능하다
+**🔒 8/10 확정된 결정 (KeeperHub, 다시 논의하지 말 것):**
+- 데모 포지션 = **WETH 담보 + USDC 차입**, **Base 메인넷(8453)**.
 - 제출은 레포 하나 + `submission/*` 브랜치 동결 (§8-1)
-- Base 리저브 파라미터·주소·자릿수는 **온체인 조회로 확정 완료** (§8-2 표, `app/scripts/check-base-reserve.ts`)
-
-**❓ 남은 미검증 항목은 architecture.md §8-2 "미검증 목록" 참조** (A는 해소, B~I 남음).
-그중 구조적으로 큰 두 가지:
-- **셋업(approve·supply·borrow)을 전부 KeeperHub로 해야 한다** — 실행 지갑은 KeeperHub만 서명 가능.
-  게다가 `aave-v3/borrow`는 액션 enum에 없어서 **MCP를 손으로 호출**해야 한다
-- **Aave는 ETH가 아니라 WETH를 받는다** — 실행 지갑에 WETH를 어떻게 넣을지 미해결(거래소 직접 출금? wrap?)
+- Vercel 배포는 안 함(8/13 결정) — 실행 지갑에 실자금이 있어서 인증 없는 공개 URL 리스크가 큼
 
 ---
 
@@ -683,3 +674,56 @@ approve는 자산을 안 움직이고 `web3/*`라 가스가 대납돼 **빈 지�
   `KEEPERHUB-TEARDOWN.md`) #5에 "이틀 뒤 업데이트" 단락 추가.
 
   **다음 = `submission/keeperhub` 브랜치 동결+태그 → 제출 → Flare 트랙 착수.**
+
+- 8/13~14 기기2 (마라톤 세션, 기기 교체 전 핸드오프): Flare 트랙을 사실상 KeeperHub 수준으로
+  끌어올림. 순서대로:
+
+  **① Flare Summer Signal 공고 실사** — architecture.md §8-3 신설. 마감은 원래 알던 값
+  (2026/08/15 04:59)이 맞았음(중간에 "8/14"로 잘못 정정했다가 사용자가 재확인해줘서 원복).
+  바운티 2개(Interoperable Asset Products / Confidential Compute Apps) 확인 → **Confidential
+  Compute는 8/13(2)에 포기 결정**(Flare 팀 인덱서 DB 자격증명이라는 외부 승인 병목, 응답시간
+  통제 불가). Interoperable Asset Products 하나에 집중하기로 확정.
+
+  **② XRP/USD로 확장.** `docs/FTSO.md`(공식 문서 전문, 로컬만 — git엔 안 올림) 확인 결과
+  XRP/USD가 공식 피드로 실재(🟢 Low Risk 등급), FAssets 전용 피드는 따로 없음 → 순수 XRP/USD가
+  이 바운티에서 쓸 수 있는 사실상 유일한 선택지. `contracts/contracts/FeedCheck.sol` +
+  `check-xrp-feed.ts`로 Coston2에서 직접 조회해 실측(문서 인용 아님).
+
+  **③ 라이브 사이클 처음엔 막힘 → 근본 원인 찾아 해결.** 처음엔 `checkAndExecute`를 폴링마다
+  실제 tx로 쐈는데(`flare-poll.ts`) XRP가 몇 분간 threshold(5bips)를 안 넘어서 계속 실패.
+  원인은 두 가지: (a) 컨트랙트가 **하락만** 감시하는데 XRP가 계속 오르고 있었음 (b) 매번
+  실제 tx를 쏘는 게 느림. → `flare-watch.ts` 신설: `FeedCheck.sol`로 **무료(view, tx 없음)**
+  실시간 관찰 후 진짜로 threshold 밴드에 들어온 순간에만 실제 tx 커밋. anchor를 현재가로
+  재설정(`flare-reset-policy.ts`)한 뒤 이 방식으로 **처음으로 완주**:
+  `checkAndExecute` tx(`0xf5e238c2…`, tier=escalation, 실제 3bips 하락) → Claude 실제 판단
+  (`severity: medium`, `action: INCREASE_MONITORING`, 근거에 "임계값 바로 그 지점" 실측 인용)
+  → `INCREASE_MONITORING`은 상태 안 바꾸는 액션이라 tx 없이 정상 종료. **이 결과를 그대로
+  확정**(더 깊은 회색지대=LOCK_POSITION 재시도는 시간 우선으로 안 함).
+  이걸로 Flare 쪽도 §0-1 두 축이 라이브로 끝까지 검증됨 — `app/executors/flare.ts`에
+  `checkPolicy`/`setPolicyFor`/`readPolicy`/`readLivePrice` 추가.
+
+  **④ 프롬프트 신설.** `app/agent/prompts/flare-diagnoser.md`/`flare-strategist.md` — Aave HF
+  대신 FTSO 이탈률 기준. strategist는 "지금 상태를 실제로 바꾸는 액션은 LOCK_POSITION뿐"이라고
+  정직하게 명시. `app/agent/prompt.ts`의 `buildFlareAgentPrompt()`가 이걸 조립하고,
+  `parseVerdict()`는 KeeperHub 쪽과 **완전히 동일 코드를 재사용** — "같은 brain이 두 실행엔진을
+  몬다"는 주장의 코드 증거.
+
+  **⑤ 웹 UI 패널 신설(8/14, 시간 여유 생겨서 터미널 녹화 대신 원래 계획으로 복귀).**
+  `/flare` 새 라우트. `run-console.tsx`의 Step/RawToggle을 `_components/step.tsx`로 뽑아
+  KeeperHub·Flare 콘솔이 공유(리팩터링, `run-console.tsx`도 이걸 쓰도록 수정됨).
+  `FlareConsole`(`_components/flare-console.tsx`) + `_actions/flare-steps.ts` 신설, 5막 구조는
+  KeeperHub와 대칭이되 2막이 다름 — "Watch live XRP/USD price" 버튼으로 무료 폴링 시작, 3초마다
+  현재가·이탈률 표시, threshold 진입하면 강조 → "Run checkAndExecute now"로 실제 커밋.
+  즉시방어 tier는 "No agent needed" 카드로 별도 표시(LLM 0번 호출 강조).
+  **검증**: `next build`/`tsc` 통과, `npm run dev` 기동 후 `/`·`/flare` 둘 다 200 확인,
+  1막(Deploy watch) 실제 렌더링 확인. **2~5막의 실제 브라우저 클릭 동작은 미검증** — 다음
+  기기에서 직접 클릭해서 확인 필요.
+
+  **다음 기기가 이어서 할 것 (순서대로):**
+  - [ ] `/flare` 콘솔 2~5막 브라우저에서 직접 클릭 검증 (특히 "Watch live price" 폴링이
+        3초마다 잘 갱신되는지, threshold 진입 감지가 맞는지)
+  - [ ] Flare 데모 영상 촬영 (콘솔 완성됐으니 KeeperHub처럼 큐카드 짜서 촬영)
+  - [ ] `submission/flare` 브랜치용 README 신규 작성 (Flare 전용, architecture.md §8-3 내용
+        기반 — "①실데이터(FTSOv2) ②실판단(Claude, 회색지대만)" 두 축 중심 서술, CLAUDE.md 규칙)
+  - [ ] `submission/flare` 브랜치 동결 + 태그, 제출
+  - [ ] KeeperHub 제출 여부 재확인 (이 세션에서 확답 못 받음 — 폼 제출 눌렀는지 꼭 확인할 것)
