@@ -41,9 +41,16 @@ you should be able to check.
 
 ## Proof
 
-**A transaction this agent executed through KeeperHub, on Base mainnet:**
+**The defense transaction shown in the demo video, executed by the agent through KeeperHub, on Base
+mainnet:**
 
-[`0x3e6718070bf85cc386e311d04c530ecccc21efe8695f454fc2bcc4206864e5c6`](https://basescan.org/tx/0x3e6718070bf85cc386e311d04c530ecccc21efe8695f454fc2bcc4206864e5c6)
+[`0x96f235063de478fb55bfac892c131b0ec48960fb51c0dbfa5238e4cd63692cc6`](https://basescan.org/tx/0x96f235063de478fb55bfac892c131b0ec48960fb51c0dbfa5238e4cd63692cc6)
+
+This is `SUPPLY_COLLATERAL` — the action Claude picked after reading the wallet's real Aave
+position live. Before the transaction: health factor **1.1001**, $36.51 collateral, $27.09 debt —
+close enough to liquidation that roughly a 9% adverse move in ETH would trigger it. After: health
+factor **1.3875**, $46.50 collateral, debt unchanged — the agent's own transaction moved the number
+it was judged on.
 
 > **How to verify it.** Open the hash above, not the wallet address. Gas on this run was sponsored,
 > which means a relayer submitted it: the top-level `from` is an address you won't recognise, `to`
@@ -51,6 +58,20 @@ you should be able to check.
 > under **Internal Transactions**. A sponsored transaction never appears in the sending wallet's own
 > transaction list — checking the address instead of the hash makes a successful run look like
 > nothing happened.
+
+**The same wallet's health factor moved through three real risk levels in one session, and the
+agent gave a different, genuinely reasoned verdict at each one** — not three scripted branches,
+three live calls to Claude against three different real onchain states:
+
+| Health factor | Verdict | Action |
+|---|---|---|
+| 2.00 | "ETH would need to fall ~50% before liquidation" | `NO_ACTION` |
+| 1.30 | "buffer is thin enough to erode quickly" | `INCREASE_MONITORING` |
+| 1.10 | "only ~9% of ETH downside before liquidation" | `SUPPLY_COLLATERAL` / `REPAY_DEBT` |
+
+**An earlier proof transaction**, from before Aave writes were live — a sponsored `web3/approve-token`
+call on an empty wallet, the first transaction this agent ever executed through KeeperHub:
+[`0x3e6718070bf85cc386e311d04c530ecccc21efe8695f454fc2bcc4206864e5c6`](https://basescan.org/tx/0x3e6718070bf85cc386e311d04c530ecccc21efe8695f454fc2bcc4206864e5c6)
 
 **Watches the agent generated,** both live in our KeeperHub organization and both built from a
 wallet's onchain state rather than filled into a form — hourly schedule trigger,
@@ -119,8 +140,11 @@ The shipped executor takes the direct path (`execute_protocol_action`), which re
 transaction link synchronously, so it does not poll; wiring the workflow path through `get_execution`
 is the natural next step and is not done.
 
-**Gas sponsorship** — the proof transaction above ran on an empty wallet. The execution response
-reports `sponsored: true`, and it cost 117,664 gas at 0.006 gwei, about **$0.003**.
+**Gas sponsorship** — every transaction shown here, across `web3/approve-token` and `aave-v3/supply`
+/`borrow`/`repay` alike, came back `sponsored: true`. The approve above ran on an empty wallet;
+`aave-v3/*` needed a small native balance present in the wallet to be accepted at all, but the gas
+itself was still relayer-paid, not drawn from that balance. Real cost per transaction: a few
+thousandths of a dollar.
 
 **Idempotency** — every provisioning call carries `idempotency_key: provision-<address>`, so
 re-running the demo against the same wallet doesn't stack duplicate watches. Rehearsals are safe.
@@ -215,6 +239,18 @@ Headless runs of the same pipeline:
 ```bash
 npm run demo:phase0 --prefix app -- 0x...                      # read state, deploy the watch
 npm run demo:execute --prefix app -- REPAY_DEBT '{"asset":"0x...","amount":"100000"}'
+npm run demo:live-run --prefix app                              # analyze → diagnose → execute → verify, end to end
+```
+
+A few of the enum's actions map to KeeperHub calls our TypeScript client doesn't wrap yet
+(`aave-v3/borrow` has no slot in `ActionType`, since Aave's own borrow isn't something the agent is
+meant to initiate — only respond to). These go through the org API key directly rather than through
+`KeeperHubExecutor`:
+
+```bash
+npm run demo:raw-call --prefix app -- <contract> <function> '[args]'      # execute_contract_call
+npm run demo:raw-action --prefix app -- <actionType> '{"params":"..."}'   # execute_protocol_action
+npm run demo:raw-status --prefix app -- <executionId>                     # poll a direct execution
 ```
 
 > Amounts for `aave-v3/*` actions are **uint256 base units**, not decimals — 0.1 USDC is `100000`.

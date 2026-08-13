@@ -108,6 +108,14 @@ and the error reads like an ordinary funding problem rather than "this family is
 **Suggested fix.** Publish sponsorship coverage per action family, and make the error say
 `this action is not eligible for gas sponsorship` instead of only quoting a balance.
 
+**Update, two days later.** Once the execution wallet held a small native balance (~0.002 ETH, sent
+for exactly this reason), `aave-v3/supply`, `aave-v3/borrow`, and `aave-v3/repay` all came back
+`sponsored: true` on Base mainnet — the balance was never actually spent. So the dust requirement
+above isn't "this family pays its own gas"; it's a **balance-presence gate that has nothing to do
+with what the transaction ends up costing**. That's a stranger failure mode than "not sponsored" —
+worth stating as its own line in the docs, since it means the requirement can't be inferred from
+sponsorship policy at all.
+
 ---
 
 ## 6. `execute_workflow` returns an acknowledgement, not a result

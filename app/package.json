@@ -11,7 +11,11 @@
     "start": "next start",
     "lint": "eslint",
     "demo:phase0": "node --env-file=.env node_modules/tsx/dist/cli.mjs scripts/demo-phase0.ts",
-    "demo:execute": "node --env-file=.env node_modules/tsx/dist/cli.mjs scripts/demo-execute.ts"
+    "demo:execute": "node --env-file=.env node_modules/tsx/dist/cli.mjs scripts/demo-execute.ts",
+    "demo:raw-call": "node --env-file=.env node_modules/tsx/dist/cli.mjs scripts/raw-contract-call.ts",
+    "demo:raw-status": "node --env-file=.env node_modules/tsx/dist/cli.mjs scripts/raw-status.ts",
+    "demo:raw-action": "node --env-file=.env node_modules/tsx/dist/cli.mjs scripts/raw-protocol-action.ts",
+    "demo:live-run": "node --env-file=.env node_modules/tsx/dist/cli.mjs scripts/live-run.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

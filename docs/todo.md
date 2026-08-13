@@ -39,23 +39,26 @@ approve는 자산을 안 움직이고 `web3/*`라 가스가 대납돼 **빈 지�
 > (`ANTHROPIC_API_KEY`, `KEEPERHUB_API_KEY`, `KEEPERHUB_EXECUTOR_ADDRESS`, `DEPLOYER_PRIVATE_KEY`
 > +`COSTON2_RPC_URL`). git으로 안 넘어오니 직접 채워야 한다.
 
-**⛔ 사용자만 할 수 있는 것 (코드로 못 뚫음 — 이게 지금 전부 임계경로다):**
-1. **소셜 링크 1개** — DoraHacks 제출 폼 필수(`*`). **없으면 제출 자체가 불가능하다.**
-2. **데모 영상 → YouTube 업로드** — 폼이 링크만 받는다(파일 첨부 아님). 채널 없으면 그 시간도 계산.
-3. **Base 자금** — WETH 담보 + 네이티브 ETH 먼지(0.000000231 ETH면 충분). 경로는 작업로그 8/12 기기2 참조.
-4. **브랜치 URL 검증** — 제출 폼 GitHub 칸에 `/tree/submission/keeperhub` 형식이 통과하는지.
+**✅ 8/13: Base 자금·라이브 4~5막·촬영까지 전부 끝남.** 아래 1~3은 해소, 남은 임계경로는 4~6뿐이다.
+
+1. ~~Base 자금~~ — 완료. WETH 담보 공급, HF를 2.0/1.3/1.1로 반복 착지시켜가며 agent 실제 판단
+   3종(NO_ACTION/INCREASE_MONITORING/SUPPLY_COLLATERAL) 전부 실측, `SUPPLY_COLLATERAL` 실행까지
+   실제 tx로 검증됨 — README Proof 섹션 참조
+2. ~~4~5막 라이브~~ — 완료. approve→supply→borrow(raw MCP call)→execute→재조회, 전부 실제 tx
+3. ~~데모 영상 촬영~~ — 완료. 원테이크, 최종 tx `0x96f23506…`, 편집 없음(합의된 방침)
+
+**⛔ 남은 것 — 사용자만 할 수 있는 것:**
+4. **소셜 링크 1개** — DoraHacks 제출 폼 필수(`*`). **없으면 제출 자체가 불가능하다.**
+5. **데모 영상 → YouTube 업로드** — 폼이 링크만 받는다(파일 첨부 아님).
+6. **브랜치 URL 검증** — 제출 폼 GitHub 칸에 `/tree/submission/keeperhub` 형식이 통과하는지.
    단일 레포+브랜치동결 전략 전체의 전제다(§8-1). 거부되면 전략을 바꿔야 한다.
-5. **나머지 4개 탭**(Details/Team/Contact/Submission) 필수 항목 확인.
+7. **나머지 4개 탭**(Details/Team/Contact/Submission) 필수 항목 확인.
 
-**🟢 코드로 할 수 있는 것 — 자금이 오면:**
-6. 4~5막 라이브: approve→supply→borrow(MCP 수동)→`execute(REPAY_DEBT)`→재조회. §8-2 5막 대본대로.
-   ⚠️ 셋업 전부 KeeperHub 경유 필수(실행 지갑은 KeeperHub만 서명 가능), `aave-v3/borrow`는 enum에
-   없어서 MCP 손호출.
-7. 촬영 → `submission/keeperhub` 동결 + 태그 → **마감 기다리지 말고 제출**.
-8. 8/13~15: 🟠 Flare README(신규 작성) + 영상 (+여유 시 `offerIncentive`) → `submission/flare` 동결 → 제출.
+**🟢 지금 하는 것**: README·teardown 정비 → 신규 스크립트 커밋 → `submission/keeperhub` 브랜치
+동결+태그 → **마감 기다리지 말고 제출**.
 
-**자금이 안 와도 제출은 성립한다.** 요건인 "agent가 KeeperHub로 실행한 tx"는 `0x3e671807…`로 이미 충족.
-그 경우 4~5막은 영상에서 빼고 README의 정직성 절로 대체한다.
+**다음(8/13~15)**: 🟠 Flare README(신규 작성) + 영상 (+여유 시 `offerIncentive`) →
+`submission/flare` 동결 → 제출.
 
 **🔒 8/10 확정된 결정 (다시 논의하지 말 것):**
 - 데모 포지션 = **WETH 담보 + USDC 차입**, **Base 메인넷(8453)**. 목표 HF 2.0 / 정책 임계값 2.5
@@ -183,19 +186,18 @@ approve는 자산을 안 움직이고 `web3/*`라 가스가 대납돼 **빈 지�
       바꾼다는 논지(방어 제품에서 가장 나쁜 방향)라 임팩트 순으로 맨 앞에 뒀다.
       공고의 "Best Onboarding UX Improvement"가 "where you got stuck with proposed fixes"를
       명시적으로 인정한다. $1,000 별도 상금이고 Grand Prize와 중복 수상 가능.
-- [ ] 데모 사전 준비 (§8-2, 8/10 개정) — **WETH 담보 / USDC 차입, Base 메인넷**
-      - [ ] 실행 지갑에 **WETH** 확보 ← 방법 미해결(거래소 WETH 직접 출금? ETH 받아 wrap?)
-      - [ ] Pool에 WETH approve → `aave-v3/supply`
-      - [ ] `aave-v3/borrow` USDC = 담보가치×0.415 → **HF 2.0 착지**(매 단계 실측)
-      - [ ] Pool에 USDC approve (상환용)
-      ※ 빌린 USDC가 지갑에 남아 방어 실탄이 된다 — 추가 구매 불필요
-      ※ 위 전부 KeeperHub 경유 필수. `aave-v3/borrow`는 enum에 없어 MCP 수동 호출
-- [ ] 데모 영상 촬영 + 편집
-      ※ ⚠️ 스폰서 tx는 지갑 주소 거래목록에 안 뜬다. "지갑 열어 잔고 확인" 연출 불가.
-        **tx 해시 → Internal Transactions 탭** 구성으로 촬영할 것 (architecture.md 3장)
-- [ ] README 작성 — **`submission/keeperhub` 브랜치의 루트 README = KeeperHub 전용** (§8-1)
-      ※ §0-1 두 축 중심 서술(CLAUDE.md 규칙) / 차별화: Hub 정적템플릿 vs AI 동적생성
-      ※ tx 해시(`0x8632b1ae…`)로 검증하라는 안내 문구 필수
+- [x] 데모 사전 준비 (8/13) — **WETH 담보 / USDC 차입, Base 메인넷**
+      - [x] 실행 지갑에 WETH 확보 — Binance→개인지갑→Base 출금→wrap→실행지갑 경로로 완료
+      - [x] Pool에 WETH approve → `aave-v3/supply` 실제 성공 (프로젝트 최초 Aave 쓰기 성공)
+      - [x] `aave-v3/borrow`로 HF를 여러 단계(2.0/1.3/1.1)로 반복 착지, 매 단계 실측
+      - [x] Pool에 USDC approve 완료
+      ※ `aave-v3/*`도 실측 결과 전부 `sponsored: true` — 옛 문서("스폰서 안 됨")는 정정함(teardown #5 업데이트)
+- [x] 데모 영상 촬영 완료 (8/13) — 편집 없이 원테이크. 최종 tx `0x96f23506…` (`SUPPLY_COLLATERAL`,
+      HF 1.1001→1.3875). 촬영 중 agent가 HF 2.0/1.3/1.1 세 단계에서 각각 다른 실제 판단
+      (`NO_ACTION`/`INCREASE_MONITORING`/`SUPPLY_COLLATERAL`)을 낸 것도 실측 확인 — README에 반영
+- [x] README 정비 (8/13) — Proof 섹션을 영상의 실제 tx로 교체, 3단계 HF별 실제 판단 표 추가,
+      gas sponsorship 서술 정정(`aave-v3/*`도 스폰서됨, dust는 비용이 아니라 게이트), 신규
+      스크립트(`demo:raw-call`/`demo:raw-action`/`demo:raw-status`/`demo:live-run`) 문서화
 - [ ] `submission/keeperhub` 브랜치 동결 + 태그 (심사 8/13-8/20 내내 불변이어야 함)
 - [ ] **KeeperHub 제출** — 마감(8/13 19:00) 기다리지 말고 준비되는 대로.
       제출 URL은 브랜치 URL(`/tree/submission/keeperhub`)
@@ -607,3 +609,38 @@ approve는 자산을 안 움직이고 `web3/*`라 가스가 대납돼 **빈 지�
   **⑤ 현재 활성 KeeperHub 워크플로우** (심사위원이 대시보드를 볼 가능성 대비 정리해둠):
   Base(8453) 감시망 2개만 `enabled=true` — `r6zhrb1yc7fgr7pre8oe3`(0x6Bc68c…),
   `uaovii0ha77nknkfqhjaz`(0x2b33af…). 나머지는 전부 비활성. 한국어 설명 0건.
+
+- 8/13 기기2 — **KeeperHub 트랙 실질적으로 마감.** Base 자금 확보부터 촬영까지 한 세션에 끝남.
+
+  **① Aave 쓰기가 프로젝트 최초로 실전 성공.** WETH 0.014개를 supply → HF를 2.0으로 착지 →
+  이후 재차 borrow해서 1.3, 1.1까지 반복적으로 낮춰가며 매번 실제 파이프라인
+  (`stepAnalyze`→`stepDiagnose`→`stepExecute`→`stepVerify`, `app/scripts/live-run.ts` 신설)을
+  라이브로 돌림. 세 HF 구간에서 Claude가 **매번 다른, 실제로 계산된 판단**을 냄:
+  2.0→`NO_ACTION`, 1.3→`INCREASE_MONITORING`, 1.1→`SUPPLY_COLLATERAL`/`REPAY_DEBT` 둘 다 실측.
+  REPAY_DEBT 실행에서 HF 1.10→2.20 실제 회복까지 확인(이후 재세팅해서 촬영은 SUPPLY_COLLATERAL로 마무리).
+
+  **② 새로 확인된 것 — 문서 정정 필요했던 부분:**
+  - `aave-v3/*`도 실제로는 `sponsored: true` — §3/teardown #5의 "스폰서 안 됨"은 부정확했음.
+    다만 native ETH가 0이면 여전히 막힘(잔고 자체가 게이트, 가스로 안 쓰임) — teardown #5에 업데이트로 반영
+  - `totalDebtBase`(Aave base currency, 8자리)와 USDC 토큰 단위(6자리)를 헷갈리면 즉시 실패
+    (`ERC20: transfer amount exceeds balance`) — 제가 직접 겪고 고침, `live-run.ts`에 정정 반영
+  - `diagnoser.md`/`strategist.md`에 architecture.md가 말하던 "정책 임계값 2.5" 개념이 실제로는
+    없음 — Claude는 일반 DeFi 상식으로만 판단. 문서와 구현이 어긋나 있던 지점, 아직 코드로는 안 고침
+    (로드맵 후보: 사용자 지정 임계값을 프롬프트 입력에 추가)
+
+  **③ 새 스크립트 4종 추가** (`app/scripts/`): `raw-contract-call.ts`/`raw-protocol-action.ts`/
+  `raw-status.ts` — 조직 API 키로 MCP를 직접 호출(제 Claude Code OAuth 세션은 조직이 달라서
+  쓰기 요청에 401 — 이것도 새로 확인한 사실), `live-run.ts` — 프로덕션 서버 액션을 헤드리스로
+  실행하는 드라이런 러너. `package.json`에 `demo:raw-call`/`demo:raw-action`/`demo:raw-status`/
+  `demo:live-run` 스크립트 추가.
+
+  **④ 데모 영상 촬영 완료.** 편집 없이 원테이크(합의된 방침 — 죽은 시간이 짧아서 편집 불필요,
+  오히려 무편집이 신뢰도에 유리하다고 판단). 최종 tx `0x96f23506…`(`SUPPLY_COLLATERAL`,
+  HF 1.1001→1.3875, 담보 $36.51→$46.50, 부채 불변 $27.09). 나레이션 대본은 각 막 시작 전
+  "이 단계가 하는 역할" 소개 + 결과에서 핵심 숫자만 짚는 방식으로 정리해서 사용.
+
+  **⑤ README·teardown 정비.** Proof 섹션을 이번 영상의 실제 tx로 교체 + HF 3단계 실제 판단 표
+  추가, gas sponsorship 서술 정정, 신규 스크립트 문서화. `docs/keeperhub-teardown.md`(루트
+  `KEEPERHUB-TEARDOWN.md`) #5에 "이틀 뒤 업데이트" 단락 추가.
+
+  **다음 = `submission/keeperhub` 브랜치 동결+태그 → 제출 → Flare 트랙 착수.**
