@@ -723,7 +723,8 @@ Base 메인넷에서 `web3/approve-token`을 워크플로우로 실제 실행해
 **공고명**: Flare Summer Signal. 등록·개발 시작 6/29, **최종 제출 마감 2026/08/15 04:59**(폼에서
 직접 확인 — 원래 architecture.md에 있던 값이 맞았다), 심사 8/15-21, 수상 발표 8/24.
 
-**바운티 2개, 동시 지원**(폼이 "Selected bounty **or bounties**"로 복수선택 지원):
+**바운티 2개 있었으나, 8/13(2) 결정으로 Interoperable Asset Products 하나만 지원**(사유는
+아래 "트랙 B" 참조). 폼 자체는 "Selected bounty **or bounties**"로 복수선택을 지원했었음:
 
 - **Interoperable Asset Products** — $6,000 (1등 $4,000 / 2등 $2,000). 원문: "Build products that
   make assets more useful across Flare and connected ecosystems." **XRP/FXRP·FAssets는 우선순위
@@ -795,20 +796,61 @@ onBehalfOf류 파라미터가 없어서 **정책은 항상 `msg.sender`(=`DEPLOY
 wallet..." 문단에 이미 있던 제약이 Flare 쪽에도 그대로 적용됨.
 
 **진행 중(중단됨, 재개 필요)**: `setPolicy`를 threshold 5bips로 걸고 `checkAndExecute`를
-20초 간격으로 폴링했으나, 약 3분간 XRP/USD가 5bips(0.05%) 이상 안 움직여서 `tier: normal`에
-머묾. **아직 에스컬레이션→Claude 판단까지 라이브로 못 봤다** — 다음 세션에서
-`npm run demo:flare-poll --prefix app`으로 이어서 폴링(정책 재설정 없이, anchor 유지한 채)하거나,
-필요하면 threshold를 더 타이트하게 잡고 `setPolicy`부터 다시 걸 것.
+20초 간격으로 폴링했으나, 약 10분간 XRP/USD가 5bips(0.05%) 이상 안 움직여서 `tier: normal`에
+머묾. **아직 에스컬레이션→Claude 판단까지 라이브로 못 봤다.** 폴링마다 실제 tx(가스는 안 들지만
+매번 컨펌 대기)를 쐈던 게 비효율이었다 — 아래 8/13(2) "확정 시나리오"의 방식으로 교체한다.
 
-**남은 작업 (실코드)**:
+**🔒 8/13(2) 확정 — Confidential Compute Apps 트랙은 포기.** 외부 승인(Flare 팀의 인덱서 DB
+자격증명) 없이는 못 뚫는 병목이고, 응답 시간을 통제할 수 없어 남은 하루 반에 걸기엔 리스크가
+크다. **Interoperable Asset Products 하나에 집중.**
+
+**🔒 8/13(2) 확정 시나리오 — Flare 데모 (KeeperHub 5막과 대칭 구조)**
+
+- **네트워크·자산**: Coston2 테스트넷 전용. 가스는 **C2FLR**(파우셋으로 이미 100개 확보,
+  8/8) — **실자금 불필요.** Sepolia/Base/WETH는 이 트랙과 무관 — 그건 KeeperHub 트랙 전용이고
+  Flare 트랙은 완전히 별개 체인·별개 자금 경로다. 감시 대상 자산은 **XRP/USD**(FTSO 피드
+  `0x015852502f55534400000000000000000000000000`).
+- **막 구성** (KeeperHub의 1~5막과 정확히 대응):
+  1. **Deploy the watch** — `setPolicyFor(XRP/USD, threshold)` → 실제 tx, anchor price 기록
+  2. **Contract checks itself** — `checkAndExecute()` → 실제 tx. 정상/즉시방어/에스컬레이션 중
+     뭐가 나왔는지 이벤트로 확인. **에스컬레이션이 나오도록 아래 "실행 전 확인" 방식으로 타이밍을
+     맞춘다** — 데이터를 지어내는 게 아니라 진짜 이탈률이 그 구간에 들어온 순간에만 쏜다.
+  3. **Agent reads it and decides** — Claude가 실제 `deviationBips`로 판단 (`buildFlareAgentPrompt`)
+  4. **Execute** — `agentRespond(action)` → 실제 tx
+  5. **Confirm it moved** — `policies()` 재조회로 상태 변화 확인
+
+- **실행 전 확인해야 할 것 (우선순위 2번 항목 — 여기가 지금 막힌 지점의 근본 해법)**:
+  기존 방식(폴링마다 `checkAndExecute` 실제 tx를 쏨)은 매번 컨펌을 기다려야 해서 느리고,
+  "정상" 결과가 나올 때마다 트랜잭션 하나를 낭비한다. **가스는 안 들어도(Coston2라 무료) 매번
+  블록 컨펌을 기다리는 시간이 아깝다.** 대신:
+  1. `FeedCheck.sol`(이미 배포됨, `0x93D3cC7C2F340E7eeB5957dd7859b57fbd6cc75c`)로 XRP/USD 현재가를
+     **무료 조회(view, tx 아님)**하고, `policies()`로 이미 알고 있는 anchor와 비교해서
+     **오프체인에서 직접 이탈률을 계산** — 이러면 tx 없이 수 초 간격으로 빠르게 지켜볼 수 있다
+  2. 이탈률이 `[threshold, 2×threshold)` 구간(에스컬레이션 존)에 들어온 걸 확인한 **그 순간에만**
+     실제 `checkAndExecute()` tx를 쏜다 — 이러면 헛tx 없이 한 번에 원하는 결과를 얻는다
+  3. 이건 데이터 조작이 아니다 — 이미 진짜로 일어난 가격 변동을 "언제 커밋할지" 고르는 것뿐,
+     가격 자체나 이탈률 값을 지어내지 않는다
+  - [ ] 이 "무료 관찰 → 조건 충족 시 실제 tx" 스크립트 작성 (`app/scripts/flare-watch.ts` 예정)
+
+- **UI**: 시간(하루 반) 감안해서 새 웹 패널은 스킵하고 **터미널 스크립트 실행 화면을 그대로
+  녹화**하는 쪽으로 확정(스코프 밸브). KeeperHub도 최초 Phase0 검증은 스크립트로 먼저 했었다 —
+  §0-1 완성 기준에 웹 화면은 필요조건이 아니다.
+
+**남은 작업 (실코드, 순서대로)**:
+- [ ] `flare-watch.ts`(무료 관찰 스크립트) 작성
 - [ ] 에스컬레이션 → Claude 실제 판단 → `agentRespond` 라이브 사이클 최소 1회 완주
-- [ ] Flare 전용 웹 UI 패널 (지난 논의에서 "새로 만들자"로 정함, 아직 착수 전 — 시간 없으면
-      스코프밸브로 스크립트+터미널 녹화로 대체)
-- [ ] 데모 영상, `submission/flare` 브랜치 신규 README, 브랜치 동결+태그, 제출
+- [ ] 터미널 녹화로 데모 영상 촬영
+- [ ] `submission/flare` 브랜치 신규 README, 브랜치 동결+태그, 제출
 
 ---
 
-#### 트랙 B — Confidential Compute Apps (정직한 로드맵 제출, 코드 없음)
+#### 트랙 B — Confidential Compute Apps ⛔ 8/13(2) 포기 결정
+
+> **더 이상 지원 안 함.** FCC 자체는 시뮬레이션 모드(`SIMULATED_TEE=true`)로 실제 코드 데모까지
+> 가능하다는 걸 확인했지만(`docs/FCC.md`), 그러려면 Flare 팀에 직접 연락해서 인덱서 DB
+> 자격증명을 받아야 하는 외부 승인 병목이 있고, 응답 시간을 통제할 수 없다. 남은 하루 반을
+> 여기 걸기보다 Interoperable Asset Products 하나에 집중하기로 함. 아래 내용은 조사 기록으로만
+> 남겨둔다(나중에 CTC나 다른 기회에 참고 가능).
 
 **FCC 실태 확인 (dev.flare.network, 8/13 조회)**: TEE(Trusted Execution Environment) 기반.
 개발 모델은 "Flare Compute Extensions"(FCE) — TEE Machine(비공개, 방화벽 뒤) + TEE Proxy(공개
@@ -860,17 +902,24 @@ production system"** — 블록체인 경험자 기준으로도 **2~4주** 걸�
   execution"이 대상 방향으로 명시 — Sentinel의 진단 단계와 정확히 겹침. 좋은 제출물의 기준
   4가지(TEE 안에서 뭐가 도는지/온체인에서 뭐가 검증되는지/신뢰 가정/왜 TEE가 이득인지)도 확인,
   위 로드맵 문단에 4가지 그대로 답해뒀음.
+- **FTSO 피드 목록 원문 (`docs/FTSO.md`, dev.flare.network/ftso/feeds 전문, 8/13 확보)**:
+  표준 피드 64개 + 커스텀 피드 2개(sFLR/USD, stXRP/USD) 전부 확인. **XRP/USD가 공식 목록에
+  정확히 있음**(index 3, `0x015852502f55534400000000000000000000000000`, **🟢 Low Risk** 등급) —
+  저희가 쓰던 값이 추측이 아니었다는 게 재확인됨. **FAssets/FXRP 전용 피드는 없다** — `stXRP/USD`는
+  FAssets가 아니라 Firelight라는 별개 프로토콜의 스테이킹 파생상품이라 다른 자산이다. 즉 순수
+  XRP/USD가 이 바운티에서 쓸 수 있는 사실상 유일한 공식 XRP 관련 피드 — 트랙 A의 근거가 그대로
+  유효할 뿐 아니라 "저위험 등급 피드를 의도적으로 골랐다"는 서술도 추가할 수 있게 됨(리스크
+  관리 프로젝트라는 성격과 맞음).
+- 저희 컨트랙트 패턴(`ContractRegistry.getTestFtsoV2().getFeedById()`)이 `docs/FTSO.md`의 공식
+  샘플 컨트랙트와 정확히 일치 — 임의로 짠 게 아니라 공식 권장 패턴 그대로였음 확인.
 
 #### ❓ 아직 미확인 — 공식 문서에서 가져올 것 (추측 금지, 사용자가 확인)
 
-1. **FTSO 피드 목록 원문** — XRP/USD·stXRP/USD 존재는 확인했지만(dev.flare.network/ftso/feeds
-   요약), FAssets 전용/FXRP 전용 피드가 별도로 있는지는 페이지 전체를 못 봤다. 원문 확인 시
-   갱신할 것.
-2. **DoraHacks(또는 실제 제출 플랫폼) 폼이 바운티 복수선택을 실제로 하나의 제출로 처리하는지**
+1. **DoraHacks(또는 실제 제출 플랫폼) 폼이 바운티 복수선택을 실제로 하나의 제출로 처리하는지**
    — 공고 문구상 그렇게 보이지만, 폼 화면을 직접 봐야 확실함(KeeperHub 폼 때처럼).
-3. **FCC 해커톤 참가자용 샌드박스/화이트리스트 접근이 있는지** — "퍼블릭 프로덕션 아님"이
+2. **FCC 해커톤 참가자용 샌드박스/화이트리스트 접근이 있는지** — "퍼블릭 프로덕션 아님"이
    "참가자에게도 완전히 막혀있다"는 뜻인지 확인 필요. 있다면 트랙 B도 최소 코드 데모가 가능해짐.
-4. **메인넷 배포 요구 여부** — 공고 원문은 Coston2/Songbird/메인넷 어디든 "권장 사항"(필수
+3. **메인넷 배포 요구 여부** — 공고 원문은 Coston2/Songbird/메인넷 어디든 "권장 사항"(필수
    아님)으로 읽힘. 재확인되면 Coston2 유지(현재 상태)로 확정.
 
 ---
