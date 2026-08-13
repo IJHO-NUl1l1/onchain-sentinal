@@ -7,6 +7,8 @@ Agents can think. KeeperHub lets them act. Sentinel is built on exactly that sea
 is a language model, and every step that has to be reliable — the watching, the signing, the
 transaction — is deterministic infrastructure it never touches.
 
+**Demo video:** [youtube.com/watch?v=fkRBw2FYl7g](https://www.youtube.com/watch?v=fkRBw2FYl7g)
+
 ---
 
 ## The bar we held ourselves to
