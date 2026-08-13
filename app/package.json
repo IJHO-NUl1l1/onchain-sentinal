@@ -15,7 +15,9 @@
     "demo:raw-call": "node --env-file=.env node_modules/tsx/dist/cli.mjs scripts/raw-contract-call.ts",
     "demo:raw-status": "node --env-file=.env node_modules/tsx/dist/cli.mjs scripts/raw-status.ts",
     "demo:raw-action": "node --env-file=.env node_modules/tsx/dist/cli.mjs scripts/raw-protocol-action.ts",
-    "demo:live-run": "node --env-file=.env node_modules/tsx/dist/cli.mjs scripts/live-run.ts"
+    "demo:live-run": "node --env-file=.env node_modules/tsx/dist/cli.mjs scripts/live-run.ts",
+    "demo:flare-live-run": "node --env-file=.env node_modules/tsx/dist/cli.mjs scripts/flare-live-run.ts",
+    "demo:flare-poll": "node --env-file=.env node_modules/tsx/dist/cli.mjs scripts/flare-poll.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

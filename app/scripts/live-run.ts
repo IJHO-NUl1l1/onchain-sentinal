@@ -13,12 +13,12 @@ const BASE_USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 async function main() {
   console.log("[1] Reading position onchain...");
   const analyze = await stepAnalyze(EXECUTOR);
-  if (!analyze.ok) throw new Error(`stepAnalyze failed: ${analyze.error}`);
+  if (!analyze.ok || !analyze.data) throw new Error(`stepAnalyze failed: ${analyze.error}`);
   console.log(analyze.data.snapshot);
 
   console.log("\n[2] Agent reads it and decides...");
   const diagnose = await stepDiagnose(analyze.data.profile, analyze.data.snapshot);
-  if (!diagnose.ok) throw new Error(`stepDiagnose failed: ${diagnose.error}`);
+  if (!diagnose.ok || !diagnose.data) throw new Error(`stepDiagnose failed: ${diagnose.error}`);
   console.log("Verdict:", diagnose.data.verdict);
 
   const { action } = diagnose.data.verdict;
@@ -34,12 +34,12 @@ async function main() {
 
   console.log(`\n[3] Executing ${action} (asset=${asset}, amount=${amount})...`);
   const exec = await stepExecute(action, { asset, amount });
-  if (!exec.ok) throw new Error(`stepExecute failed: ${exec.error}`);
+  if (!exec.ok || !exec.data) throw new Error(`stepExecute failed: ${exec.error}`);
   console.log(exec.data);
 
   console.log("\n[4] Re-reading position to confirm it actually moved...");
   const verify = await stepVerify(EXECUTOR);
-  if (!verify.ok) throw new Error(`stepVerify failed: ${verify.error}`);
+  if (!verify.ok || !verify.data) throw new Error(`stepVerify failed: ${verify.error}`);
   console.log(verify.data);
 }
 

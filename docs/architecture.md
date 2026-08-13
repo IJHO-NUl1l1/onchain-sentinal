@@ -715,6 +715,136 @@ Base 메인넷에서 `web3/approve-token`을 워크플로우로 실제 실행해
 
 ---
 
+### 8-3. 🟠 Flare Summer Signal 제출 계획 (8/13 확정)
+
+> 공고 원문(사용자가 붙여넣은 것)을 그대로 근거로 삼는다. **추측으로 채운 칸이 하나도 없어야
+> 한다** — 아래 "❓ 미확인 — 공식 문서에서 가져올 것"에 있는 항목은 실제로 값을 못 구했으니
+> 코드/문서에 반영하지 않는다.
+
+**공고명**: Flare Summer Signal. 등록·개발 시작 6/29, **최종 제출 마감 8/14**(시각·타임존 미표기 —
+사용자 확인 결과 "표기된 게 전부"), 심사 8/15-21, 수상 발표 8/24.
+
+**바운티 2개, 동시 지원**(폼이 "Selected bounty **or bounties**"로 복수선택 지원):
+- **Interoperable Asset Products** — 상금풀 $6,000 (1등 $4,000 / 2등 $2,000)
+- **Confidential Compute Apps** — 상금풀 $6,000 (1등 $4,000 / 2등 $2,000)
+
+**제출물 필수 항목** (공고 원문): project name / 선택 바운티 / 짧은 제품 설명 / target user /
+데모 링크·영상·구동 앱 / GitHub·기술자료 / **"Flare를 어떻게 쓰는지" 설명** /
+**"이 프로그램 기간 중 새로 만들었거나 포팅·통합·개선한 게 뭔지" 설명** / 컨트랙트 주소(해당 시) /
+짧은 로드맵. 권장(필수 아님): Coston2/Songbird/메인넷 중 어디 배포했는지, 사용자 확보·배포·트래픽
+증거.
+
+**심사 기준** (공고 원문 그대로): ① Product usefulness ② Flare integration quality(피상적이지
+않은가) ③ Technical execution(데모가 실제로 도는가, 아키텍처가 이해 가능한가) ④ Evidence of new
+work(해커톤 기간 중 새로 만든 것이 명확히 구분되는가) ⑤ Clarity and future potential.
+
+---
+
+#### 트랙 A — Interoperable Asset Products (실제 코드로 지원)
+
+**연결 논리**: Flare의 자체 소개("unlock DeFi for assets that do not have native smart contracts,
+starting with XRP through FAssets")가 정확히 겨냥하는 게 XRP다. `SentinelVault.sol`은 `feedId`를
+파라미터로 받게 이미 설계돼 있어서(architecture.md §2, 8/9 완성), **컨트랙트 수정 없이** 감시
+대상 자산만 XRP/USD로 바꾸면 "FAssets로 브릿지되는 자산을 지키는 감시망"이 된다.
+
+**실제로 쓰는 Flare 기술 (전부 온체인 실측, 8/13):**
+- **FTSOv2** — `ContractRegistry.getTestFtsoV2().getFeedById(feedId)` (Coston2 개발용 view 함수,
+  가스無). 기존엔 FLR/USD만 썼는데, 이번에 **XRP/USD 피드**(`0x015852502f55534400000000000000000000000000`)로
+  확장. 실측 확인: `contracts/contracts/FeedCheck.sol` + `contracts/scripts/check-xrp-feed.ts`로
+  Coston2에서 직접 조회 → **$1.004361 (decimals 6)** 실제 값 수신 (배포 주소
+  `0x93D3cC7C2F340E7eeB5957dd7859b57fbd6cc75c`, 8/13). 문서 인용이 아니라 체인이 답한 값.
+- **SentinelVault.sol** — `setPolicy(feedId, thresholdBips)` / 퍼미션리스 `checkAndExecute` /
+  화이트리스트 `agentRespond`. Coston2 `0xBf5778109e894b7C093D91B8a7518c95Fe74c3EF`(8/9 배포,
+  이번 트랙에서 재사용 — 재배포 없음).
+- **3단 판단 구조**(§0-1 "Flare 존재 의의" 참조) — 정상/즉시방어는 LLM 없이 컨트랙트가 스스로
+  판단, 회색지대(에스컬레이션)만 Claude가 실제 이탈률(`deviationBips`) 데이터로 판단.
+
+**8/13 신규 코드:**
+- `app/executors/flare.ts` — `checkPolicy(user)`(퍼미션리스 `checkAndExecute` 호출 + 이벤트
+  디코딩으로 normal/immediate-defense/escalation 3단 중 뭐가 나왔는지 판별), `setPolicyFor(feedId,
+  thresholdBips)`(임의 피드로 정책 설정 — `provisionMonitoring`의 FLR/USD 고정값 우회).
+  둘 다 `Executor` 인터페이스 밖(KeeperHub엔 대응 개념이 없음 — Aave 상태는 `analyzer.ts`가
+  직접 읽어서 필요 없었음).
+- `app/agent/prompts/flare-diagnoser.md` / `flare-strategist.md` — Aave HF 대신 FTSO 이탈률
+  기준으로 새로 씀. strategist는 "지금 컨트랙트가 실제로 상태를 바꾸는 액션은 `LOCK_POSITION`
+  뿐"이라고 정직하게 명시(다른 액션을 골라도 이벤트만 남고 자금은 안 움직임 — 과장 방지).
+- `app/agent/prompt.ts`의 `buildFlareAgentPrompt()` — `buildAgentPrompt()`와 대칭. `parseVerdict()`는
+  그대로 재사용(같은 `Verdict`/`ActionType`) — **이게 "같은 brain이 두 실행엔진을 몬다"는 주장을
+  코드로 증명하는 지점**.
+- `app/scripts/flare-live-run.ts` / `flare-poll.ts` — XRP/USD로 setPolicy → checkAndExecute
+  폴링 → 에스컬레이션 뜨면 실제 Claude 호출 → `agentRespond`까지 헤드리스로 도는 드라이런.
+
+**⚠️ 8/13 라이브 검증 중 발견 + 수정한 버그**: `checkPolicy`/`setPolicyFor`에 지갑 주소를
+`0x2b33af…`(KeeperHub Turnkey)로 잘못 넣었었다 — Aave와 달리 Flare의 `setPolicy`엔
+onBehalfOf류 파라미터가 없어서 **정책은 항상 `msg.sender`(=`DEPLOYER_PRIVATE_KEY`의 주소
+`0x6Bc68c3C6d4D9B02E435dF25bBc22E59541C809c`)에 귀속**된다. KeeperHub와 Flare가 서로 다른
+지갑을 감시 대상으로 쓴다는 걸 코드로 다시 확인한 셈 — README §"Defense is limited to the
+wallet..." 문단에 이미 있던 제약이 Flare 쪽에도 그대로 적용됨.
+
+**진행 중(중단됨, 재개 필요)**: `setPolicy`를 threshold 5bips로 걸고 `checkAndExecute`를
+20초 간격으로 폴링했으나, 약 3분간 XRP/USD가 5bips(0.05%) 이상 안 움직여서 `tier: normal`에
+머묾. **아직 에스컬레이션→Claude 판단까지 라이브로 못 봤다** — 다음 세션에서
+`npm run demo:flare-poll --prefix app`으로 이어서 폴링(정책 재설정 없이, anchor 유지한 채)하거나,
+필요하면 threshold를 더 타이트하게 잡고 `setPolicy`부터 다시 걸 것.
+
+**남은 작업 (실코드)**:
+- [ ] 에스컬레이션 → Claude 실제 판단 → `agentRespond` 라이브 사이클 최소 1회 완주
+- [ ] Flare 전용 웹 UI 패널 (지난 논의에서 "새로 만들자"로 정함, 아직 착수 전 — 시간 없으면
+      스코프밸브로 스크립트+터미널 녹화로 대체)
+- [ ] 데모 영상, `submission/flare` 브랜치 신규 README, 브랜치 동결+태그, 제출
+
+---
+
+#### 트랙 B — Confidential Compute Apps (정직한 로드맵 제출, 코드 없음)
+
+**FCC 실태 확인 (dev.flare.network, 8/13 조회)**: TEE(Trusted Execution Environment) 기반.
+개발 모델은 "Flare Compute Extensions"(FCE) — TEE Machine(비공개, 방화벽 뒤) + TEE Proxy(공개
+인터페이스) 2단 구조. 재현 가능한 Docker 이미지 해시 등록 + 온체인 attestation 필요.
+용도: 프라이빗 데이터 처리, **외부 체인(XRPL, Bitcoin) 트랜잭션의 프로그래밍적 서명**, 빠른
+외부 데이터 attestation.
+
+**⛔ 공식 문서가 명시: "in the final stages of development and is not yet a fully public
+production system"** — 블록체인 경험자 기준으로도 **2~4주** 걸릴 거라고 문서 자체에 적혀 있음.
+남은 시간(하루)에 실제 통합은 불가능하다고 판단, **억지로 흉내내지 않는다**(심사기준 ②"피상적
+통합인가"에서 바로 감점 대상이 됨).
+
+**제출 방향**: 코드 없이, 왜 이게 Sentinel의 자연스러운 다음 단계인지 논리적으로 설명하는
+로드맵 섹션만 작성.
+- 지금 진단 단계(Claude 호출)는 지갑의 실제 담보/부채(또는 FTSO 이탈률) 데이터를 우리 서버가
+  처리해서 API로 보낸다. 이 진단 함수를 FCE로 옮기면 그 데이터가 우리 서버조차 못 보는 격리된
+  TEE 안에서만 처리된다 — "판단(LLM)과 실행(결정론적 인프라)의 분리"라는 0장 원칙을, 이번엔
+  "판단 자체가 우리도 못 훔쳐보는 격리 환경에서 일어난다"는 방향으로 한 단계 더 강화하는 그림.
+- FCC의 실제 특징인 "외부 체인 트랜잭션 서명"을 근거로: 지금 KeeperHub/Aave 구현이 증명한
+  판단/실행 분리 원칙을, **Flare 밖의 체인까지 FCC로 확장**할 수 있다는 논리 — Flare가 판단의
+  최종 근거지가 되고, FCC가 그 판단을 다른 체인 위 실행으로 서명해 옮기는 다리 역할.
+- 명확히 "제안/로드맵"이라고 라벨링 — 구현했다고 절대 안 쓴다.
+
+**남은 작업 (문서만)**:
+- [ ] 위 로드맵 문단을 Flare README에 별도 섹션으로 정리
+- [ ] (선택) 인터페이스 스텁 하나 정도(`ConfidentialDiagnoser` 타입 정의 등)로 "여기 꽂힌다"는
+      지점을 코드 수준에서 표시 — 미구현이라고 명시된 채로
+
+---
+
+#### ❓ 미확인 — 공식 문서에서 가져올 것 (추측 금지, 사용자가 확인)
+
+1. **마감 정확한 시각·타임존** — "8/14"만 있고 시간 표기가 없음. 폼 제출 페이지나 공고
+   상세에 더 있는지 확인 필요.
+2. **"Interoperable Asset Products" 바운티의 정확한 요구조건** — FAssets 실제 통합(민팅/리딤
+   등)을 요구하는지, 아니면 FTSO로 브릿지 자산 가격을 다루는 것만으로 충분한지. 공고 본문엔
+   바운티 이름만 있고 세부 설명이 없었음 — 별도 바운티 상세 페이지가 있다면 확인 필요.
+3. **FTSO 피드 목록 원문** — XRP/USD·stXRP/USD 존재는 확인했지만(dev.flare.network/ftso/feeds
+   요약), FAssets 전용/FXRP 전용 피드가 별도로 있는지는 페이지 전체를 못 봤다. 원문 확인 시
+   갱신할 것.
+4. **DoraHacks(또는 실제 제출 플랫폼) 폼이 바운티 복수선택을 실제로 하나의 제출로 처리하는지**
+   — 공고 문구상 그렇게 보이지만, 폼 화면을 직접 봐야 확실함(KeeperHub 폼 때처럼).
+5. **FCC 해커톤 참가자용 샌드박스/화이트리스트 접근이 있는지** — "퍼블릭 프로덕션 아님"이
+   "참가자에게도 완전히 막혀있다"는 뜻인지 확인 필요. 있다면 트랙 B도 최소 코드 데모가 가능해짐.
+6. **메인넷 배포 요구 여부** — 공고 원문은 Coston2/Songbird/메인넷 어디든 "권장 사항"(필수
+   아님)으로 읽힘. 재확인되면 Coston2 유지(현재 상태)로 확정.
+
+---
+
 ## 9. 스코프 밸브 (Flare, 밀릴 때 버리는 순서)
 
 1. **최소 성립선(사수)**: FtsoV2 피드 조회 + 즉시방어/에스컬레이션 분기 + Coston2 배포 — 코드는 작성 완료

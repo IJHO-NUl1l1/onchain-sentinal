@@ -6,7 +6,7 @@
 //
 // ⚠️ FLR/USD는 매 블록(~1.8초) 갱신돼서 가스 자동견적이 빗나간다(out-of-gas). 항상 명시적 gasLimit.
 
-import { createPublicClient, createWalletClient, http, type Hex } from "viem";
+import { createPublicClient, createWalletClient, decodeEventLog, http, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { flareTestnet } from "viem/chains";
 import type { Action, Executor, MonitoringProfile, ProvisionResult, TxResult } from "./types";
@@ -42,6 +42,44 @@ const vaultAbi = [
       { name: "action", type: "uint8" },
     ],
     outputs: [],
+  },
+  {
+    type: "function",
+    name: "checkAndExecute",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "user", type: "address" }],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "policies",
+    stateMutability: "view",
+    inputs: [{ name: "user", type: "address" }],
+    outputs: [
+      { name: "feedId", type: "bytes21" },
+      { name: "anchorPrice", type: "uint256" },
+      { name: "thresholdBips", type: "uint256" },
+      { name: "isLocked", type: "bool" },
+      { name: "exists", type: "bool" },
+    ],
+  },
+  {
+    type: "event",
+    name: "ImmediateDefense",
+    inputs: [
+      { name: "user", type: "address", indexed: true },
+      { name: "currentPrice", type: "uint256", indexed: false },
+      { name: "deviationBips", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "EscalationRequested",
+    inputs: [
+      { name: "user", type: "address", indexed: true },
+      { name: "currentPrice", type: "uint256", indexed: false },
+      { name: "deviationBips", type: "uint256", indexed: false },
+    ],
   },
 ] as const;
 
@@ -149,4 +187,102 @@ export class FlareExecutor implements Executor {
       },
     };
   }
+}
+
+/**
+ * Sets a policy against an arbitrary FTSO feed, bypassing provisionMonitoring's hardcoded
+ * FLR/USD default. Used for the Interoperable Asset Products angle — pointing the same vault
+ * at XRP/USD, the asset Flare's FAssets bridges onto the chain, with zero contract changes.
+ */
+export async function setPolicyFor(feedId: string, thresholdBips: bigint): Promise<{ transactionLink: string; anchorPrice: string }> {
+  const { wallet, pub } = clients();
+  const hash = await wallet.writeContract({
+    address: VAULT_ADDRESS,
+    abi: vaultAbi,
+    functionName: "setPolicy",
+    args: [feedId as Hex, thresholdBips],
+    gas: GAS_LIMIT,
+  });
+  await pub.waitForTransactionReceipt({ hash });
+  const policyRaw = await pub.readContract({
+    address: VAULT_ADDRESS,
+    abi: vaultAbi,
+    functionName: "policies",
+    args: [clients().account.address],
+  });
+  return { transactionLink: `${EXPLORER}/tx/${hash}`, anchorPrice: policyRaw[1].toString() };
+}
+
+export interface PolicyState {
+  feedId: string;
+  anchorPrice: string;
+  thresholdBips: string;
+  isLocked: boolean;
+}
+
+export type CheckResult =
+  | { tier: "normal"; policy: PolicyState }
+  | { tier: "immediate-defense"; policy: PolicyState; currentPrice: string; deviationBips: string; transactionLink: string }
+  | { tier: "escalation"; policy: PolicyState; currentPrice: string; deviationBips: string; transactionLink: string };
+
+/**
+ * Calls the permissionless `checkAndExecute` and reports which of the three tiers the contract
+ * landed on, by decoding whichever event (if any) it emitted. Not part of the Executor interface —
+ * KeeperHub has no equivalent "ask the contract to judge itself" step, since Aave state is read
+ * directly by analyzer.ts instead.
+ */
+export async function checkPolicy(user: string): Promise<CheckResult> {
+  const { wallet, pub, account } = clients();
+  const target = (user as Hex) ?? account.address;
+
+  const hash = await wallet.writeContract({
+    address: VAULT_ADDRESS,
+    abi: vaultAbi,
+    functionName: "checkAndExecute",
+    args: [target],
+    gas: GAS_LIMIT,
+  });
+  const receipt = await pub.waitForTransactionReceipt({ hash });
+  const transactionLink = `${EXPLORER}/tx/${hash}`;
+
+  const policyRaw = await pub.readContract({
+    address: VAULT_ADDRESS,
+    abi: vaultAbi,
+    functionName: "policies",
+    args: [target],
+  });
+  const policy: PolicyState = {
+    feedId: policyRaw[0],
+    anchorPrice: policyRaw[1].toString(),
+    thresholdBips: policyRaw[2].toString(),
+    isLocked: policyRaw[3],
+  };
+
+  for (const log of receipt.logs) {
+    try {
+      const parsed = decodeEventLog({ abi: vaultAbi, data: log.data, topics: log.topics });
+      if (parsed.eventName === "ImmediateDefense") {
+        return {
+          tier: "immediate-defense",
+          policy,
+          currentPrice: parsed.args.currentPrice.toString(),
+          deviationBips: parsed.args.deviationBips.toString(),
+          transactionLink,
+        };
+      }
+      if (parsed.eventName === "EscalationRequested") {
+        return {
+          tier: "escalation",
+          policy,
+          currentPrice: parsed.args.currentPrice.toString(),
+          deviationBips: parsed.args.deviationBips.toString(),
+          transactionLink,
+        };
+      }
+    } catch {
+      // not a SentinelVault event (e.g. FTSO system contract logs) — skip
+    }
+  }
+
+  return { tier: "normal", policy };
 }

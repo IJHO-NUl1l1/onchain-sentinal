@@ -202,7 +202,11 @@ approve는 자산을 안 움직이고 `web3/*`라 가스가 대납돼 **빈 지�
 - [ ] **KeeperHub 제출** — 마감(8/13 19:00) 기다리지 말고 준비되는 대로.
       제출 URL은 브랜치 URL(`/tree/submission/keeperhub`)
 
-## Phase D — Flare 버전 (8/9 예정보다 일찍 병렬 착수 → 8/15 04:59) 🟠
+## Phase D — Flare 버전 (8/9 예정보다 일찍 병렬 착수 → 8/14, 시각 미표기) 🟠
+
+> **8/13: 공고가 "Flare Summer Signal"이고 바운티제(Interoperable Asset Products /
+> Confidential Compute Apps, 복수선택)인 걸 처음 확인.** 상세 계획·근거·미확인 항목은
+> architecture.md §8-3에 전부 기록함 — 여기는 진행상황만 남긴다.
 
 > KeeperHub Base 검증과 독립적인 작업이라 8/11까지 안 기다리고 8/9에 바로 시작함.
 
@@ -235,6 +239,18 @@ approve는 자산을 안 움직이고 `web3/*`라 가스가 대납돼 **빈 지�
       ※ 남은 것: 콘솔/데모에서 executor를 **선택**하는 배선은 아직 없다(현재 UI는 KeeperHub 고정).
         `Executor` 인터페이스로는 갈아끼울 수 있고 스크립트로는 둘 다 호출 가능하지만,
         화면에서 토글하진 못한다. Flare 영상 찍을 때 필요하면 그때 붙이면 된다.
+- [x] `checkPolicy()`/`setPolicyFor()` 추가 (8/13, `app/executors/flare.ts`) — 퍼미션리스
+      `checkAndExecute` 호출 + 이벤트 디코딩으로 3단 판정, 임의 feedId로 정책 설정. 상세는
+      architecture.md §8-3.
+- [x] Flare 전용 프롬프트(`flare-diagnoser.md`/`flare-strategist.md`) + `buildFlareAgentPrompt()`
+      신설 (8/13) — `parseVerdict()`는 그대로 재사용.
+- [x] XRP/USD 피드 실측 확인 (8/13) — Coston2에서 `FeedCheck.sol`로 직접 조회, $1.004361 실제 값.
+- [~] **XRP/USD 라이브 사이클 진행 중, 미완주** (8/13) — `setPolicy`(threshold 5bips) 걸고
+      `checkAndExecute` 폴링했으나 ~3분간 tier=normal에 머묾. **에스컬레이션→Claude 판단까지
+      아직 못 봄.** 다음 세션: `npm run demo:flare-poll --prefix app`으로 이어서 폴링(정책
+      재설정 없이 anchor 유지) 또는 threshold 더 타이트하게 재설정.
+- [ ] Flare 전용 웹 UI 패널 (지난 논의에서 "새로 만들자"로 결정, 아직 미착수)
+- [ ] Confidential Compute Apps 로드맵 섹션 작성 (코드 없음 — architecture.md §8-3 "트랙 B" 내용 그대로 README에)
 - [ ] 키퍼 스크립트 (퍼미션리스 `checkAndExecute` 주기 호출)
 - [ ] (스코프밸브) FDC 유출검증 - 시간 되면 실구현, 안 되면 인터페이스+로드맵
 - [ ] Flare 데모 영상

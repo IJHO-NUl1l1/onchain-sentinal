@@ -53,6 +53,38 @@ export function buildAgentPrompt(profile: MonitoringProfile, currentStateJson: s
   ].join("\n");
 }
 
+/** Flare track — same shape, different templates (FTSO price policy instead of an Aave position). */
+export function buildFlareAgentPrompt(policy: Record<string, unknown>, currentStateJson: string): string {
+  const diagnoser = readTemplate("flare-diagnoser.md");
+  const strategist = readTemplate("flare-strategist.md");
+
+  return [
+    diagnoser,
+    "\n---\n",
+    strategist,
+    "\n---\n",
+    "## Input for this run\n",
+    "Policy (from `setPolicy`):",
+    "```json",
+    JSON.stringify(policy, null, 2),
+    "```",
+    "",
+    "Current onchain state (from `checkAndExecute`'s escalation, read moments ago):",
+    "```json",
+    currentStateJson,
+    "```",
+    "",
+    "## Final output",
+    "",
+    "Do not return the diagnoser output on its own. Reason through both stages, then answer with",
+    "only this combined JSON object (no other text):",
+    "",
+    "```json",
+    '{ "severity": "...", "diagnosis": "...", "action": "...", "rationale": "..." }',
+    "```",
+  ].join("\n");
+}
+
 export interface Verdict {
   severity: Severity;
   diagnosis: string;
