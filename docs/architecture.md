@@ -836,11 +836,21 @@ wallet..." 문단에 이미 있던 제약이 Flare 쪽에도 그대로 적용됨
   녹화**하는 쪽으로 확정(스코프 밸브). KeeperHub도 최초 Phase0 검증은 스크립트로 먼저 했었다 —
   §0-1 완성 기준에 웹 화면은 필요조건이 아니다.
 
-**남은 작업 (실코드, 순서대로)**:
-- [ ] `flare-watch.ts`(무료 관찰 스크립트) 작성
-- [ ] 에스컬레이션 → Claude 실제 판단 → `agentRespond` 라이브 사이클 최소 1회 완주
-- [ ] 터미널 녹화로 데모 영상 촬영
-- [ ] `submission/flare` 브랜치 신규 README, 브랜치 동결+태그, 제출
+**✅ 8/14 완주 — Flare §0-1 두 축 라이브 검증 최종 완료.**
+`flare-watch.ts`(무료 오프체인 관찰, `FeedCheck.sol`로 tx 없이 이탈률 계산 → threshold 진입
+순간에만 실제 `checkAndExecute` 커밋)로 실제 XRP/USD 하락을 잡음:
+- `checkAndExecute` 실제 tx [`0xf5e238c2…`](https://coston2-explorer.flare.network/tx/0xf5e238c226b32bc4195d1f594816861932e46a2c6f68644bc0e887f7a7f5c508) → `tier: escalation` (진짜 3bips 하락)
+- Claude 실제 판단: `severity: medium`, `action: INCREASE_MONITORING`, 근거에 "임계값 바로 그
+  지점, 즉시방어선까지 0%"라고 실제 수치 인용
+- `INCREASE_MONITORING`은 온체인 상태를 안 바꾸는 액션이라(프롬프트에 이미 정직하게 명시) 실행
+  단계는 tx 없이 정상 종료 — **이것도 실패가 아니라 진짜 결과**(KeeperHub의 NO_ACTION과 같은 원칙)
+- **이 결과를 그대로 데모로 확정** — 더 깊은 회색지대(LOCK_POSITION) 재시도는 안 함(시간 우선)
+
+**남은 작업 (순서대로)**:
+- [ ] 위 라이브 사이클을 터미널 녹화로 데모 영상 촬영 (재현: `flare-reset-policy.ts` →
+      `flare-watch.ts`, 또는 이미 나온 실제 tx들을 화면에 보여주며 설명하는 방식도 가능)
+- [ ] `submission/flare` 브랜치용 README 신규 작성
+- [ ] 브랜치 동결 + 태그, 제출
 
 ---
 

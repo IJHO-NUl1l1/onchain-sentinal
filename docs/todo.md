@@ -245,12 +245,12 @@ approve는 자산을 안 움직이고 `web3/*`라 가스가 대납돼 **빈 지�
 - [x] Flare 전용 프롬프트(`flare-diagnoser.md`/`flare-strategist.md`) + `buildFlareAgentPrompt()`
       신설 (8/13) — `parseVerdict()`는 그대로 재사용.
 - [x] XRP/USD 피드 실측 확인 (8/13) — Coston2에서 `FeedCheck.sol`로 직접 조회, $1.004361 실제 값.
-- [~] **XRP/USD 라이브 사이클 진행 중, 미완주** (8/13) — `setPolicy`(threshold 5bips) 걸고
-      `checkAndExecute` 폴링했으나 ~3분간 tier=normal에 머묾. **에스컬레이션→Claude 판단까지
-      아직 못 봄.** 다음 세션: `npm run demo:flare-poll --prefix app`으로 이어서 폴링(정책
-      재설정 없이 anchor 유지) 또는 threshold 더 타이트하게 재설정.
-- [ ] Flare 전용 웹 UI 패널 (지난 논의에서 "새로 만들자"로 결정, 아직 미착수)
-- [ ] Confidential Compute Apps 로드맵 섹션 작성 (코드 없음 — architecture.md §8-3 "트랙 B" 내용 그대로 README에)
+- [x] **XRP/USD 라이브 사이클 완주** (8/14) — `flare-watch.ts`(무료 오프체인 관찰)로 실제 하락
+      3bips 잡음 → `checkAndExecute` 실제 tx(`0xf5e238c2…`, tier=escalation) → Claude 실제 판단
+      (`INCREASE_MONITORING`) → 실행. Flare §0-1 두 축 최종 검증 완료. 상세는 architecture.md §8-3.
+      이 결과로 확정, 재시도 안 함(시간 우선 결정).
+- [x] ~~Flare 전용 웹 UI 패널~~ — 시간 부족으로 스킵 확정, 터미널 녹화로 대체(스코프 밸브)
+- [x] ~~Confidential Compute Apps~~ — 8/13(2) 트랙 자체 포기 결정, 로드맵 작성 불필요
 - [ ] 키퍼 스크립트 (퍼미션리스 `checkAndExecute` 주기 호출)
 - [ ] (스코프밸브) FDC 유출검증 - 시간 되면 실구현, 안 되면 인터페이스+로드맵
 - [ ] Flare 데모 영상

@@ -213,6 +213,18 @@ export async function setPolicyFor(feedId: string, thresholdBips: bigint): Promi
   return { transactionLink: `${EXPLORER}/tx/${hash}`, anchorPrice: policyRaw[1].toString() };
 }
 
+/** Free view read — no tx, no gas, no wait. For watching deviation without spending checkAndExecute. */
+export async function readPolicy(user: string): Promise<{ feedId: string; anchorPrice: string; thresholdBips: string; isLocked: boolean }> {
+  const { pub } = clients();
+  const raw = await pub.readContract({
+    address: VAULT_ADDRESS,
+    abi: vaultAbi,
+    functionName: "policies",
+    args: [user as Hex],
+  });
+  return { feedId: raw[0], anchorPrice: raw[1].toString(), thresholdBips: raw[2].toString(), isLocked: raw[3] };
+}
+
 export interface PolicyState {
   feedId: string;
   anchorPrice: string;
