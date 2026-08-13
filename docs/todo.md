@@ -610,6 +610,10 @@ approve는 자산을 안 움직이고 `web3/*`라 가스가 대납돼 **빈 지�
   Base(8453) 감시망 2개만 `enabled=true` — `r6zhrb1yc7fgr7pre8oe3`(0x6Bc68c…),
   `uaovii0ha77nknkfqhjaz`(0x2b33af…). 나머지는 전부 비활성. 한국어 설명 0건.
 
+- 8/13 기기2: **🔒 결정 — Vercel 배포 안 함.** 실행 지갑에 실자금이 들어있는 상태에서 인증 없는
+  공개 URL을 내는 리스크(아래 ④)가 실자금 리스크로 바뀌었다고 판단. 영상+로컬 실행으로 제출.
+  아래 8/12 배포 준비 기록은 참고용으로만 남겨둔다 — 다시 꺼내지 말 것.
+
 - 8/12 기기1(10): **Vercel 배포 준비.**
   ①**Root Directory = `app`** 로 지정해야 한다(Settings→General). 루트에 `app/`(Next)과
     `contracts/`(Hardhat)가 별개 프로젝트로 있어서 루트를 주면 빌드 자체가 안 된다.
