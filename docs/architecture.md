@@ -427,13 +427,12 @@ Block Latency Feed는 매 블록(~1.8초)마다 갱신되는데, ethers의 자�
 
 ---
 
-## 8. 일정 (KeeperHub 8/13 19:00 / Flare 8/14, 시각 미표기)
+## 8. 일정 (KeeperHub 8/13 19:00 / Flare 8/15 04:59)
 
-> **8/13 정정**: "Flare 8/15 04:59"는 출처를 못 찾은 값이었다. 실제 공고("Flare Summer Signal")엔
-> **"August 14 Final submission deadline"**만 있고 시각·타임존 표기가 없다 — 하루 당겨졌다고 보고
-> 움직인다. 이 공고는 바운티제(Interoperable Asset Products / Confidential Compute Apps, 복수
-> 선택 가능)라는 것도 이번에 처음 확인됨 — 아래 일정표의 "~8/15 04:59"는 참고만 하고 실제로는
-> 8/14 안에 끝내는 걸 목표로 한다.
+> **8/13 재정정**: 공고 페이지엔 "August 14"만 있어서 하루 당겨진 줄 알았는데, 사용자가 실제
+> 폼에서 정확한 값을 확인해줬다 — **"Deadline 2026/08/15 04:59"**, 원래 알고 있던 값이 맞았다.
+> 아래 일정표 그대로 유지. (공고가 "Flare Summer Signal"이고 바운티제라는 것 자체는 이번에
+> 새로 확인된 사실 — §8-3 참조.)
 
 **8/6 개정, 8/9 갱신.** 원안(D1=8/2, 14일 계획) 대비 8/6 시점에 3~4일 지연이 있었으나,
 아래 D3-5 압축안대로 Phase A·B를 8/9에 마쳐 흡수했다 (진행상황은 docs/todo.md).
@@ -721,12 +720,24 @@ Base 메인넷에서 `web3/approve-token`을 워크플로우로 실제 실행해
 > 한다** — 아래 "❓ 미확인 — 공식 문서에서 가져올 것"에 있는 항목은 실제로 값을 못 구했으니
 > 코드/문서에 반영하지 않는다.
 
-**공고명**: Flare Summer Signal. 등록·개발 시작 6/29, **최종 제출 마감 8/14**(시각·타임존 미표기 —
-사용자 확인 결과 "표기된 게 전부"), 심사 8/15-21, 수상 발표 8/24.
+**공고명**: Flare Summer Signal. 등록·개발 시작 6/29, **최종 제출 마감 2026/08/15 04:59**(폼에서
+직접 확인 — 원래 architecture.md에 있던 값이 맞았다), 심사 8/15-21, 수상 발표 8/24.
 
 **바운티 2개, 동시 지원**(폼이 "Selected bounty **or bounties**"로 복수선택 지원):
-- **Interoperable Asset Products** — 상금풀 $6,000 (1등 $4,000 / 2등 $2,000)
-- **Confidential Compute Apps** — 상금풀 $6,000 (1등 $4,000 / 2등 $2,000)
+
+- **Interoperable Asset Products** — $6,000 (1등 $4,000 / 2등 $2,000). 원문: "Build products that
+  make assets more useful across Flare and connected ecosystems." **XRP/FXRP·FAssets는 우선순위
+  영역이지 필수 조건이 아니다** — "other connected ecosystems or assets are also eligible"라고
+  명시. 대상 방향: FXRP 온보딩, 크로스체인 자산 대시보드, 지갑 경험, 결제/머천트, DeFi 통합,
+  자산 이동 UX, 포트폴리오 툴, 유동성 인터페이스. 좋은 제출물의 기준: 실제로 도는 제품/통합,
+  명확한 유저 문제, Flare 인프라의 의미 있는 사용, 해커톤 이후로 이어지는 현실적 경로.
+- **Confidential Compute Apps** — $6,000 (1등 $4,000 / 2등 $2,000). 원문: "Build private
+  applications using Flare Confidential Compute." TEE로 민감한 로직을 오프체인에서 돌리고 결과를
+  온체인 워크플로우에 연결하는 게 핵심. 대상 방향: confidential orderbook, private auction,
+  sealed-bid market, secure matching engine, private strategy execution, **TEE-secured agents**,
+  confidential AI workflows, private scoring/ranking. 좋은 제출물은 **①TEE 안에서 뭐가 프라이빗하게
+  도는지 ②온체인에서 뭐가 검증/소비되는지 ③신뢰 가정이 뭔지 ④왜 일반 스마트컨트랙트가 아니라
+  confidential compute가 이 제품에 이득인지**를 설명해야 함.
 
 **제출물 필수 항목** (공고 원문): project name / 선택 바운티 / 짧은 제품 설명 / target user /
 데모 링크·영상·구동 앱 / GitHub·기술자료 / **"Flare를 어떻게 쓰는지" 설명** /
@@ -742,10 +753,12 @@ work(해커톤 기간 중 새로 만든 것이 명확히 구분되는가) ⑤ Cl
 
 #### 트랙 A — Interoperable Asset Products (실제 코드로 지원)
 
-**연결 논리**: Flare의 자체 소개("unlock DeFi for assets that do not have native smart contracts,
-starting with XRP through FAssets")가 정확히 겨냥하는 게 XRP다. `SentinelVault.sol`은 `feedId`를
-파라미터로 받게 이미 설계돼 있어서(architecture.md §2, 8/9 완성), **컨트랙트 수정 없이** 감시
-대상 자산만 XRP/USD로 바꾸면 "FAssets로 브릿지되는 자산을 지키는 감시망"이 된다.
+**연결 논리**: 바운티 원문에 XRP/FXRP·FAssets가 "우선순위 영역"이라고 명시돼 있고(필수 조건
+아님, "other connected ecosystems or assets are also eligible"), 대상 방향 목록의 "DeFi
+integrations · asset movement UX · portfolio tools"에 저희 프로젝트가 정확히 들어간다.
+`SentinelVault.sol`은 `feedId`를 파라미터로 받게 이미 설계돼 있어서(architecture.md §2, 8/9
+완성), **컨트랙트 수정 없이** 감시 대상 자산만 XRP/USD로 바꾸면 "FAssets로 브릿지되는 자산을
+지키는 감시망"이 된다 — 억지로 끼워맞춘 게 아니라 바운티가 정의한 범위 안에 실제로 있다.
 
 **실제로 쓰는 Flare 기술 (전부 온체인 실측, 8/13):**
 - **FTSOv2** — `ContractRegistry.getTestFtsoV2().getFeedById(feedId)` (Coston2 개발용 view 함수,
@@ -808,15 +821,26 @@ production system"** — 블록체인 경험자 기준으로도 **2~4주** 걸�
 남은 시간(하루)에 실제 통합은 불가능하다고 판단, **억지로 흉내내지 않는다**(심사기준 ②"피상적
 통합인가"에서 바로 감점 대상이 됨).
 
-**제출 방향**: 코드 없이, 왜 이게 Sentinel의 자연스러운 다음 단계인지 논리적으로 설명하는
-로드맵 섹션만 작성.
-- 지금 진단 단계(Claude 호출)는 지갑의 실제 담보/부채(또는 FTSO 이탈률) 데이터를 우리 서버가
-  처리해서 API로 보낸다. 이 진단 함수를 FCE로 옮기면 그 데이터가 우리 서버조차 못 보는 격리된
-  TEE 안에서만 처리된다 — "판단(LLM)과 실행(결정론적 인프라)의 분리"라는 0장 원칙을, 이번엔
-  "판단 자체가 우리도 못 훔쳐보는 격리 환경에서 일어난다"는 방향으로 한 단계 더 강화하는 그림.
-- FCC의 실제 특징인 "외부 체인 트랜잭션 서명"을 근거로: 지금 KeeperHub/Aave 구현이 증명한
-  판단/실행 분리 원칙을, **Flare 밖의 체인까지 FCC로 확장**할 수 있다는 논리 — Flare가 판단의
-  최종 근거지가 되고, FCC가 그 판단을 다른 체인 위 실행으로 서명해 옮기는 다리 역할.
+**연결 논리**: 바운티 대상 목록의 "**TEE-secured agents**"·"private strategy execution"·
+"confidential AI workflows"가 정확히 Sentinel의 진단 단계(Claude가 지갑의 실제 재무 상태를
+보고 판단)에 해당한다 — 억지 연결이 아니라 바운티가 원하는 것 자체다.
+
+**제출 방향**: 코드 없이, 공고가 요구하는 4개 질문에 정면으로 답하는 로드맵 섹션만 작성.
+1. **TEE 안에서 뭐가 프라이빗하게 도는가**: 지금 진단 단계(Claude 호출)는 지갑의 실제 담보/부채
+   (또는 FTSO 이탈률) 데이터를 우리 서버가 처리해서 API로 보낸다. FCE로 옮기면 이 데이터가
+   우리 서버조차 못 보는 격리된 TEE 안에서만 처리된다.
+2. **온체인에서 뭐가 검증/소비되는가**: 지금과 동일 — TEE가 뱉는 `{severity, action, rationale}`
+   중 `action`은 여전히 `agentRespond`의 화이트리스트 enum으로 검증되고, 실제 상태 변경은
+   `LOCK_POSITION`만 실행한다. TEE는 "누가 판단했나"만 바꾸지, "판단이 뭘 할 수 있나"는 안 바꾼다
+   — 판단/실행 분리 원칙이 여전히 최종 방어선.
+3. **신뢰 가정**: 지금은 "우리 서버가 지갑 데이터를 본다"는 걸 신뢰해야 한다. FCE로 옮기면
+   TEE attestation을 신뢰하는 것으로 바뀐다 — 운영자(우리)를 안 믿어도 되는 구조로 이동.
+4. **왜 일반 스마트컨트랙트가 아니라 confidential compute인가**: 판단 자체가 LLM 추론이라
+   온체인에서 돌릴 수 없다(가스·프라이버시 둘 다 안 됨) — 그렇다고 그냥 우리 서버에서 돌리면
+   지갑의 민감한 재무 데이터가 제3자 인프라를 거친다. TEE가 "오프체인 연산이지만 운영자도 못
+   훔쳐본다"는 중간 지점을 메운다.
+- 부수적으로: FCC의 "외부 체인 트랜잭션 프로그래밍적 서명" 기능을 근거로, 판단/실행 분리 원칙을
+  **Flare 밖의 체인까지 확장**할 수 있다는 논리도 로드맵에 한 문단 추가.
 - 명확히 "제안/로드맵"이라고 라벨링 — 구현했다고 절대 안 쓴다.
 
 **남은 작업 (문서만)**:
@@ -826,21 +850,27 @@ production system"** — 블록체인 경험자 기준으로도 **2~4주** 걸�
 
 ---
 
-#### ❓ 미확인 — 공식 문서에서 가져올 것 (추측 금지, 사용자가 확인)
+#### ✅ 8/13 확인 완료
 
-1. **마감 정확한 시각·타임존** — "8/14"만 있고 시간 표기가 없음. 폼 제출 페이지나 공고
-   상세에 더 있는지 확인 필요.
-2. **"Interoperable Asset Products" 바운티의 정확한 요구조건** — FAssets 실제 통합(민팅/리딤
-   등)을 요구하는지, 아니면 FTSO로 브릿지 자산 가격을 다루는 것만으로 충분한지. 공고 본문엔
-   바운티 이름만 있고 세부 설명이 없었음 — 별도 바운티 상세 페이지가 있다면 확인 필요.
-3. **FTSO 피드 목록 원문** — XRP/USD·stXRP/USD 존재는 확인했지만(dev.flare.network/ftso/feeds
+- **마감**: 2026/08/15 04:59 (폼에서 직접 확인, 원래 알고 있던 값이 맞았음)
+- **"Interoperable Asset Products" 요구조건**: XRP/FXRP·FAssets는 우선순위일 뿐 필수 아님 —
+  "other connected ecosystems or assets are also eligible"로 명시. DeFi 통합·자산 이동 UX·
+  포트폴리오 툴이 대상 방향에 포함돼 저희 프로젝트가 범위 안에 있음을 확인.
+- **"Confidential Compute Apps" 요구조건**: 원문에 "TEE-secured agents"·"private strategy
+  execution"이 대상 방향으로 명시 — Sentinel의 진단 단계와 정확히 겹침. 좋은 제출물의 기준
+  4가지(TEE 안에서 뭐가 도는지/온체인에서 뭐가 검증되는지/신뢰 가정/왜 TEE가 이득인지)도 확인,
+  위 로드맵 문단에 4가지 그대로 답해뒀음.
+
+#### ❓ 아직 미확인 — 공식 문서에서 가져올 것 (추측 금지, 사용자가 확인)
+
+1. **FTSO 피드 목록 원문** — XRP/USD·stXRP/USD 존재는 확인했지만(dev.flare.network/ftso/feeds
    요약), FAssets 전용/FXRP 전용 피드가 별도로 있는지는 페이지 전체를 못 봤다. 원문 확인 시
    갱신할 것.
-4. **DoraHacks(또는 실제 제출 플랫폼) 폼이 바운티 복수선택을 실제로 하나의 제출로 처리하는지**
+2. **DoraHacks(또는 실제 제출 플랫폼) 폼이 바운티 복수선택을 실제로 하나의 제출로 처리하는지**
    — 공고 문구상 그렇게 보이지만, 폼 화면을 직접 봐야 확실함(KeeperHub 폼 때처럼).
-5. **FCC 해커톤 참가자용 샌드박스/화이트리스트 접근이 있는지** — "퍼블릭 프로덕션 아님"이
+3. **FCC 해커톤 참가자용 샌드박스/화이트리스트 접근이 있는지** — "퍼블릭 프로덕션 아님"이
    "참가자에게도 완전히 막혀있다"는 뜻인지 확인 필요. 있다면 트랙 B도 최소 코드 데모가 가능해짐.
-6. **메인넷 배포 요구 여부** — 공고 원문은 Coston2/Songbird/메인넷 어디든 "권장 사항"(필수
+4. **메인넷 배포 요구 여부** — 공고 원문은 Coston2/Songbird/메인넷 어디든 "권장 사항"(필수
    아님)으로 읽힘. 재확인되면 Coston2 유지(현재 상태)로 확정.
 
 ---
