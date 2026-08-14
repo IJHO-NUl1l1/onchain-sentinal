@@ -32,35 +32,35 @@ approve는 자산을 안 움직이고 `web3/*`라 가스가 대납돼 **빈 지�
 → 공고 제출 요건 *"a transaction your agent executed via KeeperHub"*는 **이미 충족된 상태**다.
    Aave 자금이 끝내 안 와도 제출 자체는 성립한다.
 
-## ▶ 다음 기기가 할 일 (8/14 심야 기준, 우선순위 순)
+## ▶ 다음 기기가 할 일 (8/14 밤 기준, 우선순위 순)
 
-> **먼저 읽을 것**: 이 섹션 → 작업 로그 맨 아래 "8/13~14 기기2 (마라톤 세션)" 항목 →
-> architecture.md §8-3(Flare 전체 계획·근거).
-> **환경 세팅**은 `/CLAUDE.md`의 "두 기기 개발" 참조. `app/.env`에 **키가 5종** 필요하다
+> **먼저 읽을 것**: 이 섹션 → 작업 로그 맨 아래 "8/14 기기2 (v2 완주)" 항목 →
+> architecture.md §8-3(Flare 전체 계획·근거) / §3 (v1/v2 비교표).
+> **환경 세팅**은 `/CLAUDE.md`의 "두 기기 개발" 참조. `app/.env`에 **키가 6종** 필요하다
 > (`ANTHROPIC_API_KEY`, `KEEPERHUB_API_KEY`, `KEEPERHUB_EXECUTOR_ADDRESS`,
 > `KEEPERHUB_DEV_CHAIN_ID=8453`, `DEPLOYER_PRIVATE_KEY`, `COSTON2_RPC_URL`). git으로 안 넘어오니
 > 직접 채워야 한다.
 
-**✅ KeeperHub 트랙 — 코드·검증·촬영 전부 완료.** README·teardown 정비까지 끝남.
-**⚠️ 단, 실제로 DoraHacks 폼에서 "제출" 버튼을 눌렀는지 이 세션에서 확답을 못 받았다 — 제일 먼저
+**✅ KeeperHub 트랙 — 코드·검증·촬영 전부 완료.**
+**⚠️ 단, 실제로 DoraHacks 폼에서 "제출" 버튼을 눌렀는지 계속 확답을 못 받고 있다 — 제일 먼저
 확인할 것.** 안 눌렸으면 그게 최우선(마감 8/13 19:00은 이미 지났을 수 있음, 확인 필요).
 
-**🔴 8/14 오전 — Flare 컨트랙트에 자산 커스터디를 추가하다가 절반에서 멈췄다. 이어받는 기기가
-제일 먼저 읽을 것. 상세는 작업로그 맨 아래 "8/14 기기1(커스터디)" 항목.**
-요지: `SentinelVault` v2를 새로 배포했고(`0x1288516DcE1642952d1e3eB79504F496edb38D31`)
-코드는 이미 v2를 가리키는데, **v2는 라이브 검증을 한 번도 안 했고 콘솔에 예치·인출 막도 없다.**
-→ **선택 ①v2 마저 완성 ②v1으로 되돌리고 원래대로 촬영.** 시간 없으면 ②가 안전하다(§3 표 참조).
+**✅ Flare 트랙 — v2(실자산 커스터디)까지 라이브 검증 완료.** "테스트넷이라도 자산은 반드시
+건드린다"는 사용자 결정으로 v1 롤백 없이 v2를 끝까지 완성함. 예치→감시→(즉시방어로) 잠금→
+인출 시도 revert→unlock→인출 성공까지 전부 실제 tx로 확보됨(작업로그 "8/14 기기2 (v2 완주)"
+표 참조). 남은 건 촬영·문서·제출뿐:
 
-**✅ Flare 트랙 — 컨트랙트/코드/라이브 검증/웹 UI까지 다 됨(단 v1 기준).** 남은 건 촬영·문서·제출:
-
-1. [ ] **`/flare` 콘솔 2~5막을 브라우저에서 직접 클릭해서 검증** — 1막(Deploy watch)만
-   렌더링 확인했고, 그 이후(특히 "Watch live price" 3초 폴링, threshold 진입 감지)는
-   코드만 짜두고 실제 클릭 테스트를 못 했다. `npm run dev --prefix app` → `localhost:3000/flare`
-2. [ ] **Flare 데모 영상 촬영** — 콘솔 완성됐으니 KeeperHub 때처럼 큐카드 짜서 진행.
-   자산은 C2FLR뿐(실자금 불필요), 이미 확보돼 있음(100개, 8/8 파우셋)
-3. [ ] **`submission/flare` 브랜치용 README 신규 작성** — architecture.md §8-3 내용 기반,
-   "①FTSOv2 실데이터 ②회색지대만 Claude가 판단" 두 축 중심(CLAUDE.md 규칙, 영어로)
+1. [ ] **`README-flare-draft.md`(repo 루트, 아직 커밋 안 됨)를 `submission/flare` 브랜치의
+   루트 `README.md`로 반영** — 6단계 tx 표까지 이미 다 채워져 있음
+2. [ ] **`/flare` 콘솔을 브라우저에서 직접 클릭해서 1~7막 전체 검증** — 지금까지 검증은 전부
+   스크립트 직접 호출(`flare-deposit.ts`/`flare-reset-policy.ts`/`flare-watch.ts`/
+   `flare-try-withdraw.ts`/`flare-unlock.ts`)이고, **콘솔 UI 클릭 경로는 한 번도 안 눌러봤다**
+3. [ ] **Flare 데모 영상 촬영** — 이미 나온 실제 결과(잠김→revert→unlock→성공)를 콘솔에서
+   재현하거나 짚어가며 설명. 큐카드는 KeeperHub 때 방식 참고
 4. [ ] **`submission/flare` 브랜치 동결 + 태그, 제출**
+
+**참고**: 지금 v2 vault 상태 — 정책은 잠금 해제됨(`unlock()` 완료), 잔고 5 C2FLR 남아있음(10
+예치 후 5 인출함). 재촬영 시 이 상태에서 이어가거나, 필요하면 `flare-deposit.ts`로 더 채워도 됨.
 
 **🔒 8/13(2) 확정 — Confidential Compute Apps 바운티는 포기.** Interoperable Asset Products
 하나만 지원. 이유·조사 내용은 architecture.md §8-3 "트랙 B" 참조. 다시 논의하지 말 것.
@@ -780,3 +780,33 @@ approve는 자산을 안 움직이고 `web3/*`라 가스가 대납돼 **빈 지�
 
   **판단 기준: 촬영·README·제출에 필요한 시간을 먼저 빼고, 남는 시간이 3시간 미만이면 ②.**
   섞어 쓰지 말 것 — 코드가 v2를 가리키는데 v1에서 찍은 화면을 쓰면 주소가 안 맞는다.
+
+- 8/14 기기2 (v2 완주) — **① 선택, 끝까지 돌림. v2 라이브 검증 완료.**
+
+  사용자가 "테스트넷이라도 자산은 반드시 건드리는 걸로 간다"고 확정 → v2로 진행.
+
+  **한 것:**
+  1. 콘솔에 **1막(Deposit real funds)** / **7막(Test the exit)** 추가
+     (`app/app/_actions/flare-steps.ts`의 `flareStepDeposit`/`flareStepTryWithdraw`/
+     `flareStepBalance`, `flare-console.tsx` 재배선 — 기존 5막을 2~6막으로 밀고 앞뒤에 붙임)
+  2. **10 C2FLR 실제 예치** (`0x0884e0d9…`)
+  3. XRP/USD 정책 반복 재설정하며 라이브 시도 3회:
+     - threshold 3bips → escalation → Claude `INCREASE_MONITORING` (실제 판단, 상태 변화 없음)
+     - threshold 1bips → escalation → Claude `INCREASE_MONITORING` (1bip는 노이즈 수준이라고
+       스스로 판단 — 똑똑한 답변)
+     - **threshold 4bips → 실제 8bips 하락 → 즉시방어 티어, 컨트랙트가 스스로 `isLocked=true`**
+       (`0x6ed2cc11…`, LLM 호출 없음 — 3단 판단의 다른 축이 실증됨)
+  4. **인출 시도 → `PositionLocked`로 실제 revert 확인.** 처음엔 vaultAbi에 커스텀 에러 정의가
+     없어서 viem이 에러명을 못 읽었음(제네릭 메시지만 나옴) → `vaultAbi`에 `PositionLocked` 등
+     에러 6종 추가해서 정정, 재시도로 정확한 사유 확인.
+  5. `unlock()`(`0xddb6e089…`) → 인출 재시도 → **정상 성공**(`0x4d0102ae…`) — 잠금 해제 후엔
+     같은 함수가 정상 작동한다는 대조까지 확보(자산을 인질로 안 잡는다는 증거).
+  6. `README-flare-draft.md` 작성(repo 루트, 아직 커밋 전) — 위 6단계 tx 전부 표로 정리.
+
+  **다음 기기가 할 일:**
+  - [ ] `submission/flare` 브랜치 파서 `README-flare-draft.md`를 그 브랜치의 루트 `README.md`로
+  - [ ] `/flare` 콘솔을 브라우저에서 직접 클릭해서 1·7막 포함 전체 흐름 눈으로 확인
+        (지금까지 검증은 전부 스크립트 직접 호출, 콘솔 UI 클릭 경로는 아직 미검증)
+  - [ ] 데모 영상 촬영 — 위 6단계를 그대로 재현하거나, 이미 나온 tx들을 콘솔 화면에서 짚어가며 설명
+  - [ ] 브랜치 동결 + 태그, 제출
+  - [ ] KeeperHub 제출 여부 재확인 — 계속 확답을 못 받고 있음, 우선순위로 확인할 것

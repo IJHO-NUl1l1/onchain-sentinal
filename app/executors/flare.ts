@@ -42,6 +42,12 @@ const DEFAULT_THRESHOLD_BIPS = BigInt(500);
 const GAS_LIMIT = BigInt(300_000);
 
 const vaultAbi = [
+  { type: "error", name: "NotAgent", inputs: [] },
+  { type: "error", name: "PolicyNotFound", inputs: [] },
+  { type: "error", name: "PositionLocked", inputs: [] },
+  { type: "error", name: "InsufficientBalance", inputs: [] },
+  { type: "error", name: "TransferFailed", inputs: [] },
+  { type: "error", name: "NothingToDeposit", inputs: [] },
   {
     type: "function",
     name: "setPolicy",
