@@ -30,6 +30,8 @@ interface Peek {
   thresholdBips: string;
   dropped: boolean;
   deviationBips: string;
+  /** 컨트랙트가 지금 커밋하면 내릴 판정. gray일 때만 에이전트가 호출된다. */
+  zone: "normal" | "gray" | "immediate";
   readyToCommit: boolean;
 }
 
@@ -356,8 +358,34 @@ export function FlareConsole() {
                       </div>
                       <div className="flex gap-3">
                         <dt className="w-32 text-zinc-500">Deviation</dt>
-                        <dd className={peek.readyToCommit ? "text-emerald-400" : "text-zinc-300"}>
-                          {peek.deviationBips} bips {peek.readyToCommit && "— inside threshold band"}
+                        <dd
+                          className={
+                            peek.zone === "gray"
+                              ? "text-emerald-400"
+                              : peek.zone === "immediate"
+                                ? "text-amber-400"
+                                : "text-zinc-300"
+                          }
+                        >
+                          {peek.deviationBips} bips
+                        </dd>
+                      </div>
+                      <div className="flex gap-3">
+                        <dt className="w-32 text-zinc-500">If committed now</dt>
+                        <dd
+                          className={
+                            peek.zone === "gray"
+                              ? "text-emerald-400"
+                              : peek.zone === "immediate"
+                                ? "text-amber-400"
+                                : "text-zinc-500"
+                          }
+                        >
+                          {peek.zone === "gray"
+                            ? `escalation — the agent gets consulted (${peek.thresholdBips}–${Number(peek.thresholdBips) * 2} bips)`
+                            : peek.zone === "immediate"
+                              ? `immediate defense — contract locks it alone, no agent (≥${Number(peek.thresholdBips) * 2} bips)`
+                              : `normal — nothing happens (below ${peek.thresholdBips} bips)`}
                         </dd>
                       </div>
                     </dl>
@@ -373,18 +401,22 @@ export function FlareConsole() {
                   <button
                     onClick={runCheck}
                     className={`rounded-md px-4 py-2 text-xs font-medium ${
-                      peek?.readyToCommit
+                      peek?.zone === "gray"
                         ? "bg-emerald-600 text-white hover:bg-emerald-500"
                         : "border border-zinc-700 text-zinc-300 hover:border-zinc-500"
                     }`}
                   >
                     Run checkAndExecute now
                   </button>
-                  {peek && !peek.readyToCommit && (
+                  {peek?.zone === "normal" && (
                     <p className="font-mono text-[11px] text-zinc-600">
-                      Below the threshold — running now would return{" "}
-                      <span className="text-zinc-400">normal</span> and the agent would never be
-                      reached. Waiting costs nothing.
+                      Waiting costs nothing — these reads are free.
+                    </p>
+                  )}
+                  {peek?.zone === "immediate" && (
+                    <p className="font-mono text-[11px] text-amber-500/80">
+                      Past 2x the threshold. Committing here is a valid run, but the contract
+                      resolves it alone and the agent is never called.
                     </p>
                   )}
                 </div>

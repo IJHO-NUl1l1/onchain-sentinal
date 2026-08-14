@@ -51,14 +51,22 @@ export async function flareStepPeek(user: string) {
     const threshold = BigInt(policy.thresholdBips || "0");
     const dropped = current < anchor;
     const deviationBips = dropped ? ((anchor - current) * BigInt(10000)) / anchor : BigInt(0);
-    const inBand = dropped && deviationBips >= threshold;
+    // 컨트랙트의 3단 판정을 tx 없이 미리 계산한다. "임계 이상"만 보면 회색지대와 즉시방어가
+    // 한 덩어리가 되는데, 그 둘은 에이전트를 부르냐 마냐가 갈리는 완전히 다른 결과다.
+    const zone: "normal" | "gray" | "immediate" =
+      !dropped || deviationBips < threshold
+        ? "normal"
+        : deviationBips >= threshold * BigInt(2)
+          ? "immediate"
+          : "gray";
     return {
       currentPrice: current.toString(),
       anchorPrice: anchor.toString(),
       thresholdBips: threshold.toString(),
       dropped,
       deviationBips: deviationBips.toString(),
-      readyToCommit: inBand,
+      zone,
+      readyToCommit: zone !== "normal",
     };
   });
 }
