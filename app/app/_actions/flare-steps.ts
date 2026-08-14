@@ -9,9 +9,12 @@ import {
   FlareExecutor,
   XRP_USD_FEED_ID,
   checkPolicy,
+  depositToVault,
   readLivePrice,
   readPolicy,
+  readVaultBalance,
   setPolicyFor,
+  tryWithdraw,
   type CheckResult,
 } from "../../executors/flare";
 import type { Action, ActionType } from "../../executors/types";
@@ -33,7 +36,15 @@ async function timed<T>(fn: () => Promise<T>): Promise<StepPayload<T>> {
   }
 }
 
-/** 1막 — 감시망 설치. setPolicy가 호출 시점의 실제 FTSO 가격을 anchor로 기록한다. */
+/** 1막 — 진짜 자산을 금고에 예치한다. 이게 뒤에서 잠기거나 풀리는 실물이다. */
+export async function flareStepDeposit(amountEther: string) {
+  return timed(async () => {
+    const wei = BigInt(Math.floor(Number(amountEther) * 1e18));
+    return depositToVault(wei);
+  });
+}
+
+/** 2막 — 감시망 설치. setPolicy가 호출 시점의 실제 FTSO 가격을 anchor로 기록한다. */
 export async function flareStepDeploy(thresholdBips: string) {
   return timed(async () => setPolicyFor(XRP_USD_FEED_ID, BigInt(thresholdBips)));
 }
@@ -102,7 +113,22 @@ export async function flareStepExecute(actionType: ActionType, user: string) {
   });
 }
 
-/** 5막 — 정책 상태를 다시 읽어 실제로 바뀌었는지 확인한다. */
+/** 6막 — 정책 상태를 다시 읽어 실제로 바뀌었는지 확인한다. */
 export async function flareStepVerify(user: string) {
   return timed(async () => readPolicy(user));
+}
+
+/**
+ * 7막 — 진짜 출구 시험. 잠겨 있으면 컨트랙트가 되돌린다(`PositionLocked`) — 실패를 예외가
+ * 아니라 결과로 돌려줘서 화면에 그대로 보여준다. 이게 방어가 플래그가 아니라 자금의 문이라는 증거.
+ */
+export async function flareStepTryWithdraw(amountEther: string) {
+  return timed(async () => {
+    const wei = BigInt(Math.floor(Number(amountEther) * 1e18));
+    return tryWithdraw(wei);
+  });
+}
+
+export async function flareStepBalance(user: string) {
+  return timed(async () => readVaultBalance(user));
 }

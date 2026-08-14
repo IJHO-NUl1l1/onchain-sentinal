@@ -8,9 +8,11 @@ import { useEffect, useRef, useState } from "react";
 import {
   flareStepCheck,
   flareStepDeploy,
+  flareStepDeposit,
   flareStepDiagnose,
   flareStepExecute,
   flareStepPeek,
+  flareStepTryWithdraw,
   flareStepVerify,
 } from "../_actions/flare-steps";
 import type { ActionType } from "../../executors/types";
@@ -40,6 +42,11 @@ function fmtPrice(raw: string) {
 }
 
 export function FlareConsole() {
+  const [depositAmount, setDepositAmount] = useState("10");
+  const [deposit, setDeposit] = useState<{ status: Status; raw?: unknown; ms?: number; err?: string; rows?: Row[] }>({
+    status: "idle",
+  });
+
   const [threshold, setThreshold] = useState("5");
   const [deploy, setDeploy] = useState<{ status: Status; raw?: unknown; ms?: number; err?: string; rows?: Row[] }>({
     status: "idle",
@@ -76,11 +83,50 @@ export function FlareConsole() {
   });
   const [lockedAfter, setLockedAfter] = useState<boolean | null>(null);
 
+  const [withdrawAmount, setWithdrawAmount] = useState("10");
+  const [withdraw, setWithdraw] = useState<{ status: Status; raw?: unknown; ms?: number; err?: string; rows?: Row[] }>({
+    status: "idle",
+  });
+
   useEffect(() => {
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
   }, []);
+
+  async function runDeposit() {
+    setDeposit({ status: "running" });
+    const r = await flareStepDeposit(depositAmount);
+    if (!r.ok || !r.data) {
+      setDeposit({ status: "error", ms: r.durationMs, err: r.error });
+      return;
+    }
+    setDeposit({
+      status: "success",
+      ms: r.durationMs,
+      raw: r.data,
+      rows: [
+        {
+          label: "Deposited",
+          value: `${depositAmount} C2FLR`,
+          strong: true,
+          hint: "Real native token, held by the contract — this is the asset step 4 can lock the exit on.",
+        },
+        {
+          label: "Vault balance",
+          value: `${(Number(r.data.balance) / 1e18).toFixed(4)} C2FLR`,
+          hint: "balances(you) on SentinelVault.sol — not a number in our database, the contract's own state.",
+        },
+        {
+          label: "Transaction",
+          value: r.data.transactionLink,
+          href: r.data.transactionLink,
+          strong: true,
+          hint: "deposit() — a real value-carrying transaction, Coston2.",
+        },
+      ],
+    });
+  }
 
   async function runDeploy() {
     setDeploy({ status: "running" });
@@ -98,6 +144,7 @@ export function FlareConsole() {
     setExec({ status: "idle" });
     setVerify({ status: "idle" });
     setLockedAfter(null);
+    setWithdraw({ status: "idle" });
 
     const r = await flareStepDeploy(threshold);
     if (!r.ok || !r.data) {
@@ -263,26 +310,56 @@ export function FlareConsole() {
     setVerify({ status: "success", ms: r.durationMs, raw: r.data });
   }
 
+  async function runTryWithdraw() {
+    setWithdraw({ status: "running" });
+    const r = await flareStepTryWithdraw(withdrawAmount);
+    if (!r.ok || !r.data) {
+      setWithdraw({ status: "error", ms: r.durationMs, err: r.error });
+      return;
+    }
+    const result = r.data;
+    setWithdraw({
+      status: result.ok ? "success" : "error",
+      ms: r.durationMs,
+      raw: result,
+      err: result.ok ? undefined : undefined,
+      rows: result.ok
+        ? [
+            { label: "Withdrawal", value: `${withdrawAmount} C2FLR`, strong: true, hint: "The position was unlocked, so the funds moved." },
+            {
+              label: "Transaction",
+              value: result.transactionLink ?? "-",
+              href: result.transactionLink,
+              strong: true,
+              hint: "withdraw() succeeded — real tokens left the contract.",
+            },
+            { label: "Vault balance now", value: `${(Number(result.balance) / 1e18).toFixed(4)} C2FLR` },
+          ]
+        : [
+            {
+              label: "Reverted",
+              value: result.revertReason ?? "PositionLocked",
+              strong: true,
+              hint: "The contract refused to move the funds — this is what LOCK_POSITION actually does.",
+            },
+            { label: "Vault balance", value: `${(Number(result.balance) / 1e18).toFixed(4)} C2FLR`, hint: "Unchanged — nothing left the contract." },
+          ],
+    });
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <section className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-5">
-        <label className="text-xs text-zinc-500">Threshold (bips)</label>
-        <div className="mt-2 flex gap-2">
+        <label className="text-xs text-zinc-500">Threshold (bips) — used when you deploy the watch in step 2</label>
+        <div className="mt-2">
           <input
             value={threshold}
             onChange={(e) => setThreshold(e.target.value)}
             placeholder="5"
             spellCheck={false}
-            disabled={deploy.status === "running"}
+            disabled={deploy.status !== "idle"}
             className="w-32 rounded-md border border-zinc-700 bg-transparent px-3 py-2 font-mono text-sm text-zinc-100 outline-none focus:border-emerald-500/60 disabled:opacity-50"
           />
-          <button
-            onClick={runDeploy}
-            disabled={deploy.status === "running"}
-            className="rounded-md bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-300 disabled:opacity-40"
-          >
-            Deploy watch on Flare
-          </button>
         </div>
         {/* 감도를 일부러 극단으로 올려놨다는 사실을 화면에 박아둔다 — 영상에서 말로만 하면
             "체리피킹 아니냐"로 들리고, 화면에 적혀 있으면 설계 판단으로 읽힌다. */}
@@ -301,7 +378,8 @@ export function FlareConsole() {
           </p>
         </div>
         <p className="mt-2 text-xs text-zinc-600">
-          Coston2 testnet, gas paid in C2FLR — no real funds involved in this track. Contract:{" "}
+          Coston2 testnet — C2FLR is testnet currency, but every deposit, lock, and withdrawal below
+          is a real transaction moving a real contract balance, not a simulated number. Contract:{" "}
           <a href={`${EXPLORER}/address/${VAULT_ADDRESS}`} target="_blank" rel="noreferrer" className="underline decoration-zinc-700 hover:decoration-emerald-500">
             {VAULT_ADDRESS.slice(0, 10)}… ↗
           </a>
@@ -310,19 +388,61 @@ export function FlareConsole() {
 
       <Step
         index={1}
-        title="Deploy the watch"
-        subtitle="setPolicy() anchors the real FTSOv2 XRP/USD price at this exact moment on SentinelVault.sol, Coston2."
-        status={deploy.status}
-        durationMs={deploy.ms}
-        rows={deploy.rows}
-        raw={deploy.raw}
-        rawLabel="Raw setPolicy result"
-        error={deploy.err}
-      />
+        title="Deposit real funds"
+        subtitle="deposit() sends native C2FLR into SentinelVault.sol. This is the asset the rest of the run watches over and, if it comes to that, locks the exit on."
+        status={deposit.status}
+        durationMs={deposit.ms}
+        rows={deposit.rows}
+        raw={deposit.raw}
+        rawLabel="Raw deposit() result"
+        error={deposit.err}
+      >
+        {deposit.status === "idle" && (
+          <div className="mt-4 flex items-end gap-2">
+            <div>
+              <label className="text-[11px] text-zinc-500">Amount (C2FLR)</label>
+              <input
+                value={depositAmount}
+                onChange={(e) => setDepositAmount(e.target.value)}
+                className="mt-1 w-32 rounded border border-zinc-800 bg-zinc-950 px-2 py-1.5 font-mono text-[11px] text-zinc-300 outline-none focus:border-emerald-500/50"
+              />
+            </div>
+            <button
+              onClick={runDeposit}
+              className="rounded-md bg-zinc-100 px-4 py-2 text-xs font-medium text-zinc-900 hover:bg-zinc-300"
+            >
+              Deposit
+            </button>
+          </div>
+        )}
+      </Step>
+
+      {deposit.status === "success" && (
+        <Step
+          index={2}
+          title="Deploy the watch"
+          subtitle="setPolicy() anchors the real FTSOv2 XRP/USD price at this exact moment on SentinelVault.sol, Coston2."
+          status={deploy.status}
+          durationMs={deploy.ms}
+          rows={deploy.rows}
+          raw={deploy.raw}
+          rawLabel="Raw setPolicy result"
+          error={deploy.err}
+        >
+          {deploy.status === "idle" && (
+            <button
+              onClick={runDeploy}
+              className="mt-4 rounded-md bg-zinc-100 px-4 py-2 text-xs font-medium text-zinc-900 hover:bg-zinc-300"
+            >
+              Deploy watch on Flare
+            </button>
+          )}
+        </Step>
+      )}
 
       {deploy.status === "success" && (
         <Step
-          index={2}
+          index={3}
           title="Contract checks itself"
           subtitle="checkAndExecute() is permissionless — anyone can call it. The contract alone decides normal / immediate-defense / escalation; the agent isn't involved yet."
           status={check.status}
@@ -444,7 +564,7 @@ export function FlareConsole() {
 
       {tier === "escalation" && (
         <Step
-          index={3}
+          index={4}
           title="Agent reads it and decides"
           subtitle="Only reached in the gray zone. Claude reasons from the real deviation and answers with one of seven predefined actions."
           status={verdict ? "success" : "waiting"}
@@ -498,7 +618,7 @@ export function FlareConsole() {
 
       {tier === "immediate-defense" && (
         <Step
-          index={3}
+          index={4}
           title="No agent needed"
           subtitle="The drop passed 2x the threshold — the contract locked the position by itself in step 2. This is the deliberate 'obvious case, no LLM' branch."
           status="success"
@@ -508,7 +628,7 @@ export function FlareConsole() {
 
       {verdict?.action && (
         <Step
-          index={4}
+          index={5}
           title={needsNoTransaction ? "Nothing to execute" : "Execute it onchain"}
           subtitle={
             needsNoTransaction
@@ -542,7 +662,7 @@ export function FlareConsole() {
 
       {(exec.status === "success" || needsNoTransaction) && verdict && (
         <Step
-          index={5}
+          index={6}
           title="Confirm the state actually moved"
           subtitle="Reads the same contract again. isLocked only flips if the agent actually chose to lock it."
           status={verify.status}
@@ -563,6 +683,48 @@ export function FlareConsole() {
             >
               Re-read policy
             </button>
+          )}
+        </Step>
+      )}
+
+      {verify.status === "success" && (
+        <Step
+          index={7}
+          title="Test the exit"
+          subtitle={
+            lockedAfter
+              ? "The position is locked. This is the real test — try to pull the deposit out anyway."
+              : "The position isn't locked. Withdrawing should succeed normally — the point is the contrast with a locked run."
+          }
+          status={withdraw.status}
+          durationMs={withdraw.ms}
+          rows={withdraw.rows}
+          raw={withdraw.raw}
+          rawLabel="Raw withdraw() result"
+          error={withdraw.status === "error" ? undefined : withdraw.err}
+        >
+          {withdraw.status === "idle" && (
+            <div className="mt-4 flex items-end gap-2">
+              <div>
+                <label className="text-[11px] text-zinc-500">Amount (C2FLR)</label>
+                <input
+                  value={withdrawAmount}
+                  onChange={(e) => setWithdrawAmount(e.target.value)}
+                  className="mt-1 w-32 rounded border border-zinc-800 bg-zinc-950 px-2 py-1.5 font-mono text-[11px] text-zinc-300 outline-none focus:border-emerald-500/50"
+                />
+              </div>
+              <button
+                onClick={runTryWithdraw}
+                className="rounded-md bg-emerald-600 px-4 py-2 text-xs font-medium text-white hover:bg-emerald-500"
+              >
+                Try to withdraw
+              </button>
+            </div>
+          )}
+          {withdraw.status === "error" && withdraw.rows === undefined && (
+            <p className="mt-3 rounded border border-red-500/30 bg-red-500/5 p-3 font-mono text-[11px] text-red-400">
+              {withdraw.err}
+            </p>
           )}
         </Step>
       )}
