@@ -1,273 +1,263 @@
-# Onchain Sentinel
+# Onchain Sentinel — Flare
 
-**Give it a wallet address. It reads the position onchain, designs a watch for that specific
-wallet, diagnoses the risk with an LLM, and defends the position through KeeperHub.**
+**Give it a wallet address. It reads a real onchain price, designs a watch for that specific
+position, diagnoses ambiguous risk with an LLM, and defends real deposited funds through a smart
+contract we deployed ourselves — not a template, not a company's infrastructure, our own code.**
 
-Agents can think. KeeperHub lets them act. Sentinel is built on exactly that seam: the judgment
-is a language model, and every step that has to be reliable — the watching, the signing, the
-transaction — is deterministic infrastructure it never touches.
+Agents can think. This is the Flare-native proof that the judgment/execution boundary this project
+is built on doesn't need a third-party executor at all — it can live entirely onchain, with the
+LLM only consulted for the cases a contract genuinely can't resolve on its own.
 
-**Demo video:** [youtube.com/watch?v=fkRBw2FYl7g](https://www.youtube.com/watch?v=fkRBw2FYl7g)
+**Who this is for:** anyone holding a position denominated in an interoperable asset (XRP today,
+FXRP once FAssets minting is live) who wants it watched and defended without staring at a price
+chart — and, more broadly, builders who want a pattern for onchain guardians that don't call an
+LLM for every check, only the ones that are actually ambiguous.
 
 ---
 
 ## The bar we held ourselves to
 
-Two things decide whether this project is finished. Everything else is decoration.
+Same two things as the KeeperHub track. Everything else is decoration.
 
-1. **It reads real data from the chain.** Not a fixture, not a replayed scenario — the live
-   collateral, debt and health factor of a real wallet, read from Aave v3 on Base mainnet.
-2. **The agent actually diagnoses that data.** Not a hand-written incident pasted into a prompt.
-   The numbers from step 1 go to Claude, and Claude's verdict comes back and drives what happens.
-
-If those two hold, the rest is plumbing. If they don't, no amount of UI polish makes it real.
+1. **It reads real data from the chain.** Not a fixture — the live price of a real asset (XRP/USD),
+   read from Flare's FTSOv2 oracle.
+2. **The agent actually diagnoses that data.** Only when the contract itself can't resolve the
+   situation on its own — real deviation numbers go to Claude, and its verdict drives what happens
+   next.
 
 ---
 
-## What it does, in five steps
-
-The dashboard is deliberately not a product UI. It is a run console that exposes every
-intermediate result — raw contract values, the exact prompt sent to the agent, the unedited
-KeeperHub response, transaction hashes — because the claim is that each step really happened, and
-you should be able to check.
+## What it does, in seven steps
 
 | # | Step | What actually runs |
 |---|------|--------------------|
-| 1 | **Read the position** | `getUserAccountData` on the Aave v3 Pool, Base mainnet. Health factor, collateral, debt, LTV, liquidation threshold — plus the unmodified `uint256`. |
-| 2 | **Design and deploy the watch** | The agent builds a workflow from what it just read and creates it over KeeperHub's MCP server. A scheduled job now re-checks this wallet hourly. |
-| 3 | **Diagnose** | Code assembles the full prompt from the templates plus the live data. Claude answers with `{severity, diagnosis, action, rationale}` — and `action` is rejected in code if it falls outside the enum. |
-| 4 | **Execute onchain** | The chosen action goes to KeeperHub. Turnkey signs it inside a secure enclave. No human key, no wallet popup. |
-| 5 | **Confirm it moved** | Read the same contract again. A defense that doesn't change the numbers didn't happen. |
+| 1 | **Deposit real funds** | `deposit()` on `SentinelVault.sol` — native C2FLR, a real balance the rest of the run protects. |
+| 2 | **Deploy the watch** | `setPolicy()` anchors the live FTSOv2 XRP/USD price at that exact moment. |
+| 3 | **Contract checks itself** | Permissionless `checkAndExecute()` — the contract alone sorts the case into normal / gray-zone / immediate-defense. |
+| 4 | **Agent decides** *(gray zone only)* | Real deviation data goes to Claude; it answers with one of seven predefined actions. Skipped entirely if the contract already resolved it. |
+| 5 | **Execute** | `agentRespond()` — only `LOCK_POSITION` changes state today; every choice is still recorded onchain. |
+| 6 | **Confirm the state moved** | Re-reads `policies()` — a defense that didn't change `isLocked` didn't happen. |
+| 7 | **Test the exit** | `withdraw()` — reverts with `PositionLocked` if locked, succeeds otherwise. The real proof this isn't a flag. |
+
+---
+
+## What's different here: judgment is pre-filtered onchain, not always invoked
+
+The KeeperHub track calls the agent every time. This one doesn't have to — `SentinelVault.sol`
+splits every check into three tiers **before** anything reaches an LLM:
+
+| Deviation from anchor | Who decides | What happens |
+|---|---|---|
+| Below threshold | The contract, alone | Nothing. No agent call. |
+| Threshold to 2× threshold (the gray zone) | Claude | Real deviation data goes to the model; it answers with one of seven predefined actions |
+| 2× threshold or more | The contract, alone | Locks the position immediately. No agent call — the case is unambiguous. |
+
+This is "judgment is a language model, execution is deterministic infrastructure" taken one step
+further: the decision of *whether to even ask the model* is itself deterministic and onchain.
+
+---
+
+## Real custody, not a flag
+
+An earlier version of this contract only ever set a boolean. That's thin for a track called
+**Interoperable Asset Products** — a guardian that doesn't hold an asset isn't an asset product.
+
+`SentinelVault.sol` now actually custodies funds:
+
+- `deposit()` — native C2FLR goes into the contract. This is the position being watched.
+- `withdraw(amount)` — pulls funds back out. **Reverts with `PositionLocked` if the policy is
+  locked.** The lock isn't a record of a decision; it's the thing standing between a user and
+  their money.
+- `unlock()` — the user can free their own position at any time. Defense doesn't take funds
+  hostage — it holds a door shut, and the same key that shuts it can open it.
 
 ---
 
 ## Proof
 
-**The defense transaction shown in the demo video, executed by the agent through KeeperHub, on Base
-mainnet:**
+**The full run shown in the demo video** — deposit through a genuine gray-zone agent call to a
+normal withdrawal, all on Coston2, in order:
 
-[`0x96f235063de478fb55bfac892c131b0ec48960fb51c0dbfa5238e4cd63692cc6`](https://basescan.org/tx/0x96f235063de478fb55bfac892c131b0ec48960fb51c0dbfa5238e4cd63692cc6)
-
-This is `SUPPLY_COLLATERAL` — the action Claude picked after reading the wallet's real Aave
-position live. Before the transaction: health factor **1.1001**, $36.51 collateral, $27.09 debt —
-close enough to liquidation that roughly a 9% adverse move in ETH would trigger it. After: health
-factor **1.3875**, $46.50 collateral, debt unchanged — the agent's own transaction moved the number
-it was judged on.
-
-> **How to verify it.** Open the hash above, not the wallet address. Gas on this run was sponsored,
-> which means a relayer submitted it: the top-level `from` is an address you won't recognise, `to`
-> is the contract that executes on the wallet's behalf, and `value` is `0`. The actual call sits
-> under **Internal Transactions**. A sponsored transaction never appears in the sending wallet's own
-> transaction list — checking the address instead of the hash makes a successful run look like
-> nothing happened.
-
-**The same wallet's health factor moved through three real risk levels in one session, and the
-agent gave a different, genuinely reasoned verdict at each one** — not three scripted branches,
-three live calls to Claude against three different real onchain states:
-
-| Health factor | Verdict | Action |
+| Step | What happened | Transaction |
 |---|---|---|
-| 2.00 | "ETH would need to fall ~50% before liquidation" | `NO_ACTION` |
-| 1.30 | "buffer is thin enough to erode quickly" | `INCREASE_MONITORING` |
-| 1.10 | "only ~9% of ETH downside before liquidation" | `SUPPLY_COLLATERAL` / `REPAY_DEBT` |
+| 1. Deposit | 10 C2FLR into the vault | [`0x71874ee5…`](https://coston2-explorer.flare.network/tx/0x71874ee5bd0db4f73a86ba3066076a1a0534450a10ea940bd2b49800f5dd99af) |
+| 2. Deploy the watch | `setPolicy(XRP/USD, 5 bips)`, anchor `1.004423` | [`0xc67a6b9b…`](https://coston2-explorer.flare.network/tx/0xc67a6b9b2a55387e5fc969017c28e6d98e7addfa27ca53c00b377f77a39c2ad3) |
+| 3. Contract checks itself | Real XRP/USD moved to `1.003806` — 6 bips of deviation, inside the 5–10 bip gray zone | [`0x52640ebc…`](https://coston2-explorer.flare.network/tx/0x52640ebc5c59f9a96e8534318997851686bab272ad06e3f9e15c4d1eab3e3198) |
+| 4. Agent decides | Claude: `severity: medium`, `action: INCREASE_MONITORING` — reasoning that 6 of the 10 bips needed for an automatic lock is "the shallow end of the gray zone... a single FTSO update of ordinary magnitude can cross it," so this reads as "early, low-conviction drift rather than a directional breakdown" | Real Anthropic API call, `claude-opus-5` |
+| 5. Execute | `INCREASE_MONITORING` changes no contract state — recorded via `AgentResponded` only, no transaction sent | — |
+| 6. Confirm the state | `isLocked: false` | — |
+| 7. Test the exit | Not locked, so `withdraw(10)` succeeds normally | [`0x8a273540…`](https://coston2-explorer.flare.network/tx/0x8a2735407f8c1a55b06fa777437de60e15d436f4d329573ae5a57f502bbcaa73) |
 
-**An earlier proof transaction**, from before Aave writes were live — a sponsored `web3/approve-token`
-call on an empty wallet, the first transaction this agent ever executed through KeeperHub:
-[`0x3e6718070bf85cc386e311d04c530ecccc21efe8695f454fc2bcc4206864e5c6`](https://basescan.org/tx/0x3e6718070bf85cc386e311d04c530ecccc21efe8695f454fc2bcc4206864e5c6)
+The model's full reasoning also weighed and rejected the other six actions by name — `LOCK_POSITION`
+as premature at this depth, `NO_ACTION` as wrong because the escalation was real, `ACCELERATE_ORACLE`
+as unjustified, and the fund-moving actions as not applicable to a contract that doesn't act on them
+yet — the kind of specificity a templated response doesn't produce.
 
-**Watches the agent generated,** both live in our KeeperHub organization and both built from a
-wallet's onchain state rather than filled into a form — hourly schedule trigger,
-`aave-v3/get-user-account-data`, network `8453`:
+**A second real branch, from an earlier run — the contract defending itself, with zero LLM calls.**
+Included because it's the other half of the three-tier design, even though the video centers the
+agent's judgment:
 
-- `sentinel-0x6Bc68c3C6d4D9B02E435dF25bBc22E59541C809c` — id `r6zhrb1yc7fgr7pre8oe3`
-- `sentinel-0x2b33afb068a77b103fFAF0b7d9F128209076BcE3` — id `uaovii0ha77nknkfqhjaz`
+| Step | What happened | Transaction |
+|---|---|---|
+| 1. Deposit | 10 C2FLR into the vault — real value, real balance | [`0x0884e0d9…`](https://coston2-explorer.flare.network/tx/0x0884e0d9bb51fa5df58dc1a2c5ca70f56c918a9b24e99d8f5153679013f54088) |
+| 2. Deploy the watch | `setPolicy(XRP/USD, 4 bips)`, anchor `1010763` | [`0x5ba7950c…`](https://coston2-explorer.flare.network/tx/0x5ba7950c4fd03c50f6f70b66f6a4b5497ad22dd5c6c63cc31a11c58383b8b639) |
+| 3. Contract defends itself | Real XRP/USD dropped 8 bips — past 2× the threshold. The contract locked the position **with zero LLM calls** | [`0x6ed2cc11…`](https://coston2-explorer.flare.network/tx/0x6ed2cc11439d409d580b0bbcbb37d6df30853cf362bbf7c97c384a224de4985d) |
+| 4. Test the exit, locked | `withdraw(10)` — reverts with **`PositionLocked`**. The vault's own words, not ours. | (revert — no tx broadcast; see the raw response in the console) |
+| 5. Unlock | The user, not the agent, chooses to release it | [`0xddb6e089…`](https://coston2-explorer.flare.network/tx/0xddb6e0891051d5ef8e9da0b6e39451b68301c7b69c20ac2ce67d99954ec837ab) |
+| 6. Test the exit, unlocked | `withdraw(5)` succeeds — same function, same funds, only the lock changed | [`0x4d0102ae…`](https://coston2-explorer.flare.network/tx/0x4d0102aeb52ad45a0e458fb1360f3f3176ae3fd05c63f94364539a4a58fb5815) |
 
-**Execution wallet** (Turnkey EOA, provisioned by KeeperHub):
-[`0x2b33afb068a77b103fFAF0b7d9F128209076BcE3`](https://basescan.org/address/0x2b33afb068a77b103fFAF0b7d9F128209076BcE3)
+Same contract, same policy design, two different real outcomes depending only on how far the price
+actually moved — nothing about which branch fires is scripted per run.
 
-**Contract addresses this build reads and writes** — every one of them confirmed by reading
-`getReservesList` and decoding `getConfiguration` on chain, not copied from a doc
-(`app/scripts/check-base-reserve.ts` is the script that did it):
+**Contract addresses:**
 
-| | Address | Decimals | LTV | Liquidation threshold |
-|---|---|---|---|---|
-| Aave v3 Pool (Base) | `0xA238Dd80C259a72e81d7e4664a9801593F98d1c5` | — | — | — |
-| WETH | `0x4200000000000000000000000000000000000006` | 18 | 80% | 83% |
-| USDC | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` | 6 | 75% | 78% |
-
----
-
-## Why this isn't the template
-
-KeeperHub's own template library already ships `Aave V3 Health Factor Guardian` and
-`Aave V3 Auto-Repay on Low Health`. Automatic defense is not the interesting part — that exists.
-
-Two things here don't:
-
-**The watch is designed, not filled in.** A template is a form: you pick the asset, you type the
-threshold, you enable it. Sentinel reads the wallet first and generates the workflow from what it
-finds. The two workflows above were produced for two different addresses, with nobody choosing a
-parameter for either.
-
-**The response is a judgment, bounded in code.** A template runs `if HF < 1.5 then repay`. Sentinel
-hands live data to a language model and takes back a decision — but the decision is only allowed to
-be one of seven predefined actions:
-
-```
-NO_ACTION · INCREASE_MONITORING · SUPPLY_COLLATERAL · WITHDRAW_COLLATERAL
-REPAY_DEBT · LOCK_POSITION · ACCELERATE_ORACLE
-```
-
-That constraint is not a request in the prompt. `parseVerdict()` in `app/agent/prompt.ts` validates
-the model's `action` against the enum and rejects anything else before it can reach an executor.
-The model can be wrong about severity; it cannot invent an action that moves funds somewhere we
-never sanctioned.
+| | Address |
+|---|---|
+| SentinelVault v2 (Coston2) | [`0x1288516DcE1642952d1e3eB79504F496edb38D31`](https://coston2-explorer.flare.network/address/0x1288516DcE1642952d1e3eB79504F496edb38D31) |
+| FTSOv2 feed watched | XRP/USD — `0x015852502f55534400000000000000000000000000` |
 
 ---
 
-## KeeperHub surfaces used
+## Flare surfaces used
 
-**MCP server** — the agent talks to KeeperHub over MCP (`@modelcontextprotocol/sdk`, streamable
-HTTP). `create_workflow` deploys the watch and `execute_protocol_action` runs the response. See
-`app/executors/keeperhub.ts`.
+**FTSOv2** — `ContractRegistry.getTestFtsoV2().getFeedById(feedId)`, Coston2's gas-free view path
+(production would use the payable `getFtsoV2()`). Verified independently with a throwaway reader
+contract (`contracts/contracts/FeedCheck.sol`) before wiring it into the vault — not copied from
+docs, read from the chain.
 
-**Workflow builder** — watches are created as real workflows with trigger and action nodes, so they
-appear and run in KeeperHub like any hand-built one.
+**Why XRP/USD** — Flare's own framing is unlocking DeFi for assets without native smart contracts,
+starting with XRP through FAssets. XRP/USD is a real, `🟢 Low Risk`-rated feed on Flare's official
+list. There's no dedicated FXRP feed today, so this is the closest real, live proxy for "an
+interoperable asset's price" available right now — the same contract watches it with zero code
+changes from watching FLR/USD.
 
-**Audit trail** — `get_execution` is the strongest observability surface here: per-node status,
-timings, and `transactionHashes[]` with `verified: true` and `receiptStatus` reconciled against the
-onchain receipt. We used it through the MCP tools to confirm the proof transaction, because
-`execute_workflow` returns only `{executionId, status: "running"}` — triggering is not completion.
-The shipped executor takes the direct path (`execute_protocol_action`), which returns the
-transaction link synchronously, so it does not poll; wiring the workflow path through `get_execution`
-is the natural next step and is not done.
+---
 
-**Gas sponsorship** — every transaction shown here, across `web3/approve-token` and `aave-v3/supply`
-/`borrow`/`repay` alike, came back `sponsored: true`. The approve above ran on an empty wallet;
-`aave-v3/*` needed a small native balance present in the wallet to be accepted at all, but the gas
-itself was still relayer-paid, not drawn from that balance. Real cost per transaction: a few
-thousandths of a dollar.
+## Why the demo threshold looks aggressive
 
-**Idempotency** — every provisioning call carries `idempotency_key: provision-<address>`, so
-re-running the demo against the same wallet doesn't stack duplicate watches. Rehearsals are safe.
+A production deployment would set the drop threshold around 500 bips (5%) — the size of a move
+that actually threatens a position. We run this demo at a few bips instead, disclosed onscreen in
+the console: nothing about the contract, the tiers, or the agent changes: only how sensitive the
+policy is configured to be, which is a parameter a real user sets for their own risk tolerance
+anyway.
 
 ---
 
 ## Architecture
 
 ```
-        wallet address
+        real FTSOv2 price
               │
    ┌──────────▼───────────┐
-   │  Dashboard (Next.js) │   run console — every step exposed
+   │  Dashboard (Next.js) │   /flare console — every step exposed
    └──────────┬───────────┘
               │
    ┌──────────▼────────────────────┐
    │  Agent                        │
-   │   analyzer → reads the chain  │
-   │   prompt   → assembles + validates
-   │   claude   → the judgment call
+   │   prompt   → assembles + validates (flare-diagnoser.md / flare-strategist.md)
+   │   claude   → the judgment call, only in the gray zone
    └──────────┬────────────────────┘
-              │  Executor interface — the only thing the agent knows
-     ┌────────┴────────┐
-     ▼                 ▼
- KeeperHubExecutor   FlareExecutor
- (MCP, Turnkey)      (SentinelVault on Coston2)
+              │  Executor interface — same one KeeperHubExecutor implements
+              ▼
+       FlareExecutor
+   (viem, Coston2, SentinelVault.sol)
 ```
 
-The body of the system knows `provisionMonitoring()` and `execute()` and nothing else. There is no
-`if (target === 'keeperhub')` anywhere outside `app/executors/`. That boundary is why the same brain
-drives a second execution engine — an onchain contract on Flare — without the agent changing.
+`app/agent/prompt.ts`'s `buildFlareAgentPrompt()` sits next to `buildAgentPrompt()` in the same
+file; `parseVerdict()` is the exact same function both tracks call. One brain, two executors — this
+is the code-level evidence, not a claim.
 
 ```
-app/agent/       analyzer, prompt assembly, the Claude call, verdict validation, templates
-app/executors/   Executor interface, KeeperHub adapter, Flare adapter
-app/app/         run console (_components) and its server actions (_actions)
-app/scripts/     repeatable demo runners and the onchain reserve verifier
-contracts/       SentinelVault.sol — the Flare track, deployed on Coston2
+app/agent/       flare-diagnoser.md / flare-strategist.md, buildFlareAgentPrompt()
+app/executors/   flare.ts — checkPolicy, setPolicyFor, depositToVault, tryWithdraw, readPolicy
+app/app/flare/   the Flare console route
+contracts/       SentinelVault.sol — deposit/withdraw/lock, deployed on Coston2
 ```
 
 ---
 
 ## What is honest about this build
 
-**The judgment step is a real API call, and the enum is enforced twice.** `buildAgentPrompt()`
-assembles the prompt from the templates and the live position, `askAgent()` sends it to Claude, and
-`parseVerdict()` validates what comes back — one server action, one button. The response schema
-builds its `action` enum by spreading the same constant the executor maps from, so the schema cannot
-drift from the code; a verdict naming anything outside it is rejected before execution is reachable.
-A copy-paste path is still in the UI behind a disclosure, for running the demo on a machine with no
-API key.
+**Only `LOCK_POSITION` moves contract state today.** The agent can pick any of the seven actions,
+and every choice is recorded onchain via `AgentResponded` — but `SUPPLY_COLLATERAL`,
+`WITHDRAW_COLLATERAL`, and `REPAY_DEBT` don't move funds on this contract yet (there's nothing to
+supply or repay against — this vault protects a single deposited balance, not a lending position).
+The prompt itself says so, so the model doesn't imply a capability that isn't there.
 
-**Defense is limited to the wallet KeeperHub can sign for.** Monitoring works for any address you
-type in — the two generated watches prove that. Acting on a position requires being that position's
-owner, and KeeperHub signs for its own Turnkey wallet. Extending defense to arbitrary wallets means
-Aave credit delegation, which is roadmap.
+**The policy is always owned by the signer.** `setPolicy()` has no on-behalf-of parameter, so the
+watched position is always the executor's own deposit — the same constraint the KeeperHub track has
+with its Turnkey wallet, for the same reason: whoever can sign is whoever the defense can act for.
 
-**The Flare track is a sibling, not decoration.** `SentinelVault.sol` is deployed on Coston2 at
-[`0xBf5778109e894b7C093D91B8a7518c95Fe74c3EF`](https://coston2-explorer.flare.network/address/0xBf5778109e894b7C093D91B8a7518c95Fe74c3EF)
-and reads live FTSO prices to make the same call without an LLM in the loop. `FlareExecutor`
-implements the same two methods against it, so the interface has two real implementations rather
-than one and a placeholder — `setPolicy`
-([`0x270ad4a0…`](https://coston2-explorer.flare.network/tx/0x270ad4a0268d0e7b92657464da9b0d4309d57ff6e35415e81ae7e528e6b5b217))
-anchored the policy to a live FTSO price, and an agent verdict of `LOCK_POSITION`
-([`0xcc8092c9…`](https://coston2-explorer.flare.network/tx/0xcc8092c96f2f55f6815ec22c6c3736192c83546a1696e4d9a9e4cec71e72a222))
-flipped `isLocked` on chain. Judge this submission on the KeeperHub track; the Flare work is here
-because it is what makes the executor boundary a claim about code rather than about intent.
+**This is Coston2, a testnet.** C2FLR has no market value. What's real is the mechanism: a genuine
+deposit, a genuine FTSO price, a genuine model call, and a genuine revert when the exit is locked —
+none of it simulated. Moving this to Flare mainnet is a network config change, not a rewrite.
+
+---
+
+## What existed before this program vs. what's new on Flare
+
+Onchain Sentinel started as a KeeperHub-track submission: a wallet address goes in, an LLM reads
+its real Aave v3 position and defends it through KeeperHub's execution infrastructure. That's where
+the shared "brain" — `analyzer` → `prompt` → `claude`, and the `Executor` interface it talks
+through — was built, before any Flare-specific work started.
+
+**Built new, for Flare, during this program:**
+- `SentinelVault.sol` itself — the three-tier judgment contract (normal / gray-zone / immediate-
+  defense), deployed and iterated on Coston2
+- `FlareExecutor` — the second real implementation of the same `Executor` interface KeeperHub uses,
+  proving the boundary is a property of the code, not a claim about one integration
+- Real asset custody (`deposit` / `withdraw` / the `PositionLocked` revert) — added after the first
+  version only ever set a flag, specifically because a track called *Interoperable Asset Products*
+  should touch an asset
+- `flare-diagnoser.md` / `flare-strategist.md` and `buildFlareAgentPrompt()` — the FTSO-specific
+  half of the prompt layer, sitting next to the KeeperHub one but reasoning about price deviation
+  instead of a lending position
+- The `/flare` console — its own five-through-seven-act UI, not a reskin of the KeeperHub one
+- The XRP/USD integration itself — verified against Flare's own FTSOv2 feed list before wiring it
+  in, not assumed
+
+**Ported/reused unchanged:** `parseVerdict()` and the seven-action enum are the literal same
+function and the same TypeScript union the KeeperHub track validates against — nothing was
+duplicated to make the Flare track work.
+
+**Why the new work matters:** it's the difference between "we called an LLM once" and "judgment and
+execution are separated as a general pattern, portable across chains and executors." The Flare
+track is what makes that a claim about the architecture rather than about one integration.
+
+---
+
+## Roadmap
+
+- **FAssets integration once minting is live** — the vault already watches any FTSOv2 feed with no
+  code change; pointing it at an actual FXRP price (once one exists) instead of plain XRP/USD is a
+  configuration change, not new code.
+- **Fund `SUPPLY_COLLATERAL` / `WITHDRAW_COLLATERAL` / `REPAY_DEBT` with real logic** — today they're
+  recorded recommendations only; the natural next step is a lending-style position (deposit +
+  borrow, mirroring the KeeperHub track's Aave shape) so those three actions have something to act on.
+- **A permissionless keeper bot** for `checkAndExecute()` — right now our own scripts call it;
+  the function is designed to be called by anyone, and a public keeper is what makes the watch
+  actually unattended.
+- **Flare mainnet** — the only blocker is swapping the network config; `getFtsoV2()` replaces the
+  free `getTestFtsoV2()` used here for development.
 
 ---
 
 ## Run it
 
-Node 24.15.0 (`.nvmrc`).
+Same repo, same `.env` as the KeeperHub track, plus:
+
+```
+DEPLOYER_PRIVATE_KEY=...   # Coston2 wallet, funded with C2FLR from the faucet
+COSTON2_RPC_URL=...
+```
 
 ```bash
-npm install --prefix app
-cp .env.example app/.env      # fill in the KeeperHub section
 npm run dev --prefix app
+# → http://localhost:3000/flare
 ```
 
-`app/.env` needs:
-
-```
-KEEPERHUB_API_KEY=kh_...                  # organization key, used for MCP over HTTP
-KEEPERHUB_EXECUTOR_ADDRESS=0x...          # the Turnkey wallet; Aave actions need it as onBehalfOf
-KEEPERHUB_DEV_CHAIN_ID=8453               # Base. Aave v3 actions are not available on Sepolia
-ANTHROPIC_API_KEY=sk-ant-...               # the diagnosis step; without it, use the manual fallback
-```
-
-Headless runs of the same pipeline:
+Headless:
 
 ```bash
-npm run demo:phase0 --prefix app -- 0x...                      # read state, deploy the watch
-npm run demo:execute --prefix app -- REPAY_DEBT '{"asset":"0x...","amount":"100000"}'
-npm run demo:live-run --prefix app                              # analyze → diagnose → execute → verify, end to end
+npm run demo:flare-watch --prefix app   # watches real deviation for free, commits when it's in band
 ```
-
-A few of the enum's actions map to KeeperHub calls our TypeScript client doesn't wrap yet
-(`aave-v3/borrow` has no slot in `ActionType`, since Aave's own borrow isn't something the agent is
-meant to initiate — only respond to). These go through the org API key directly rather than through
-`KeeperHubExecutor`:
-
-```bash
-npm run demo:raw-call --prefix app -- <contract> <function> '[args]'      # execute_contract_call
-npm run demo:raw-action --prefix app -- <actionType> '{"params":"..."}'   # execute_protocol_action
-npm run demo:raw-status --prefix app -- <executionId>                     # poll a direct execution
-```
-
-> Amounts for `aave-v3/*` actions are **uint256 base units**, not decimals — 0.1 USDC is `100000`.
-> The `web3/*` family takes the opposite (`"100.50"`, `"max"`). This inversion cost us an afternoon
-> and is one of the entries in the teardown below.
-
----
-
-## Where we got stuck, and what would have helped
-
-A stack of undocumented behaviours cost us real time — `abi` needing to be stringified JSON rather
-than an array, `simulate` being a boolean while `gasLimitMultiplier` is a string, `web3/*` actions
-rejecting direct execution with a 501, gas sponsorship applying per action family rather than per
-execution method, `referralCode` being rejected as missing while the schema calls it optional, and
-Aave v3 failing on an unsupported chain with an empty revert instead of saying so.
-
-They're written up with reproductions and suggested fixes — along with the four surfaces that saved
-us more time than these cost — in [`KEEPERHUB-TEARDOWN.md`](KEEPERHUB-TEARDOWN.md).
