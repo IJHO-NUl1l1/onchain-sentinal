@@ -38,7 +38,7 @@ function fmtPrice(raw: string) {
 }
 
 export function FlareConsole() {
-  const [threshold, setThreshold] = useState("3");
+  const [threshold, setThreshold] = useState("5");
   const [deploy, setDeploy] = useState<{ status: Status; raw?: unknown; ms?: number; err?: string; rows?: Row[] }>({
     status: "idle",
   });
@@ -59,6 +59,8 @@ export function FlareConsole() {
 
   const [verdict, setVerdict] = useState<Verdict | null>(null);
   const [verdictRaw, setVerdictRaw] = useState<unknown>(null);
+  /** 실제로 모델에 보낸 문자열. 코드가 실데이터로 조립했다는 증거로 화면에 그대로 띄운다 */
+  const [agentPrompt, setAgentPrompt] = useState<string | null>(null);
   const [verdictMs, setVerdictMs] = useState<number | undefined>(undefined);
   const [verdictErr, setVerdictErr] = useState<string | null>(null);
   const [verdictLoading, setVerdictLoading] = useState(false);
@@ -89,6 +91,7 @@ export function FlareConsole() {
     setEscalationData(null);
     setVerdict(null);
     setVerdictRaw(null);
+    setAgentPrompt(null);
     setVerdictErr(null);
     setExec({ status: "idle" });
     setVerify({ status: "idle" });
@@ -210,6 +213,7 @@ export function FlareConsole() {
     }
     setVerdictMs(r.durationMs);
     setVerdictRaw(r.data.raw);
+    setAgentPrompt(r.data.prompt);
     setVerdict(r.data.verdict);
   }
 
@@ -265,7 +269,7 @@ export function FlareConsole() {
           <input
             value={threshold}
             onChange={(e) => setThreshold(e.target.value)}
-            placeholder="3"
+            placeholder="5"
             spellCheck={false}
             disabled={deploy.status === "running"}
             className="w-32 rounded-md border border-zinc-700 bg-transparent px-3 py-2 font-mono text-sm text-zinc-100 outline-none focus:border-emerald-500/60 disabled:opacity-50"
@@ -277,6 +281,22 @@ export function FlareConsole() {
           >
             Deploy watch on Flare
           </button>
+        </div>
+        {/* 감도를 일부러 극단으로 올려놨다는 사실을 화면에 박아둔다 — 영상에서 말로만 하면
+            "체리피킹 아니냐"로 들리고, 화면에 적혀 있으면 설계 판단으로 읽힌다. */}
+        <div className="mt-3 rounded border border-amber-500/20 bg-amber-500/5 p-3">
+          <p className="font-mono text-[10px] uppercase tracking-wider text-amber-500/80">
+            Demo sensitivity — deliberately extreme
+          </p>
+          <p className="mt-1 text-xs leading-relaxed text-zinc-400">
+            A real deployment would set this around <span className="font-mono text-zinc-300">500</span> bips
+            (5%) — the size of a drop that actually threatens a position. We run at{" "}
+            <span className="font-mono text-zinc-300">{threshold || "5"}</span> bips (
+            {((Number(threshold || 5) / 100) || 0.05).toFixed(2)}%), roughly{" "}
+            <span className="text-zinc-300">{Math.round(500 / Math.max(Number(threshold) || 5, 1))}x</span>{" "}
+            more sensitive, so a live feed trips the policy within minutes instead of once a quarter.
+            Nothing else changes: same contract, same tiers, same agent.
+          </p>
         </div>
         <p className="mt-2 text-xs text-zinc-600">
           Coston2 testnet, gas paid in C2FLR — no real funds involved in this track. Contract:{" "}
@@ -402,6 +422,7 @@ export function FlareConsole() {
           rows={
             verdict
               ? [
+                  { label: "Model", value: "claude-opus-5", hint: "A real Anthropic API call, billed per token." },
                   { label: "Severity", value: verdict.severity, strong: true },
                   { label: "Diagnosis", value: verdict.diagnosis, hint: "Its reading of the state, in its own words." },
                   {
@@ -426,6 +447,19 @@ export function FlareConsole() {
               </button>
               {verdictErr && <p className="mt-2 font-mono text-[11px] text-red-400">Rejected — {verdictErr}</p>}
             </div>
+          )}
+
+          {/* 판정이 나온 뒤, 모델에 실제로 보낸 문자열을 그대로 보여준다 — 숫자가 화면의 실측값과
+              같다는 걸 눈으로 대조할 수 있어야 "에이전트가 진짜 읽었다"가 성립한다. */}
+          {agentPrompt && (
+            <details className="mt-4 rounded border border-zinc-800 bg-zinc-950">
+              <summary className="cursor-pointer px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-zinc-600 hover:text-zinc-400">
+                Exact prompt sent to the model
+              </summary>
+              <pre className="max-h-72 overflow-auto border-t border-zinc-800 p-3 font-mono text-[11px] leading-relaxed text-zinc-400">
+                {agentPrompt}
+              </pre>
+            </details>
           )}
         </Step>
       )}
