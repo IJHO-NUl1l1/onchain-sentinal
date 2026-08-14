@@ -1,16 +1,54 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 480" width="480" height="480">
-  <!-- Same family mark as the KeeperHub logo, recolored for the Flare submission.
-       Flare's own branding leans red/coral/pink — no exact hex confirmed publicly,
-       so this is an approximation, not a claimed brand match. -->
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="42%" r="55%">
+      <stop offset="0%" stop-color="#ff8a65" stop-opacity="0.55"/>
+      <stop offset="45%" stop-color="#f0455c" stop-opacity="0.30"/>
+      <stop offset="100%" stop-color="#f0455c" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="shieldFill" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffb199"/>
+      <stop offset="42%" stop-color="#f0455c"/>
+      <stop offset="100%" stop-color="#b3184a"/>
+    </linearGradient>
+    <linearGradient id="pulseGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#fff6ee"/>
+      <stop offset="100%" stop-color="#ffd9c7"/>
+    </linearGradient>
+    <filter id="softGlow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="9" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
   <rect width="480" height="480" rx="96" fill="#0a0a0a"/>
   <rect x="1" y="1" width="478" height="478" rx="95" fill="none" stroke="#27272a" stroke-width="2"/>
 
-  <!-- 방패 = 감시/방어. 아래로 갈수록 좁아지는 형태 -->
-  <path d="M240 96 L360 140 V250 C360 316 312 362 240 388 C168 362 120 316 120 250 V140 Z"
-        fill="none" stroke="#e4e4e7" stroke-width="18" stroke-linejoin="round"/>
+  <!-- flare burst — rays radiating outward, the "Flare" half of the mark -->
+  <g stroke="#f0455c" stroke-linecap="round" opacity="0.55">
+    <line x1="240" y1="34" x2="240" y2="78" stroke-width="6"/>
+    <line x1="240" y1="402" x2="240" y2="446" stroke-width="6"/>
+    <line x1="34" y1="240" x2="78" y2="240" stroke-width="6"/>
+    <line x1="402" y1="240" x2="446" y2="240" stroke-width="6"/>
+    <line x1="94" y1="94" x2="124" y2="124" stroke-width="5"/>
+    <line x1="356" y1="356" x2="386" y2="386" stroke-width="5"/>
+    <line x1="386" y1="94" x2="356" y2="124" stroke-width="5"/>
+    <line x1="124" y1="356" x2="94" y2="386" stroke-width="5"/>
+  </g>
 
-  <!-- 방패 안의 선: KeeperHub 버전과 같은 자리, 색만 Flare 톤(coral/red)으로 -->
-  <path d="M162 214 L206 214 L232 286 L268 178 L292 250 L318 250"
-        fill="none" stroke="#f0455c" stroke-width="18"
-        stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- warm glow seated behind the shield -->
+  <circle cx="240" cy="214" r="196" fill="url(#glow)"/>
+
+  <!-- shield — filled with gradient this time, not just an outline. the "Sentinel" half -->
+  <path d="M240 92 L364 138 V250 C364 318 314 366 240 392 C166 366 116 318 116 250 V138 Z"
+        fill="url(#shieldFill)"/>
+  <path d="M240 92 L364 138 V250 C364 318 314 366 240 392 C166 366 116 318 116 250 V138 Z"
+        fill="none" stroke="#ffe3d6" stroke-width="3" opacity="0.55"/>
+
+  <!-- glowing pulse line inside the shield -->
+  <path d="M158 214 L204 214 L230 288 L268 174 L294 250 L322 250"
+        fill="none" stroke="url(#pulseGrad)" stroke-width="16"
+        stroke-linecap="round" stroke-linejoin="round" filter="url(#softGlow)"/>
 </svg>
