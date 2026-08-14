@@ -1,54 +1,31 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 480" width="480" height="480">
   <defs>
-    <radialGradient id="glow" cx="50%" cy="42%" r="55%">
-      <stop offset="0%" stop-color="#ff8a65" stop-opacity="0.55"/>
-      <stop offset="45%" stop-color="#f0455c" stop-opacity="0.30"/>
-      <stop offset="100%" stop-color="#f0455c" stop-opacity="0"/>
+    <!-- One gradient, reused everywhere — shield, rays, pulse line — so nothing reads
+         as a separate, mismatched layer. Flare's own palette leans violet/magenta. -->
+    <linearGradient id="flareGrad" x1="10%" y1="0%" x2="90%" y2="100%">
+      <stop offset="0%" stop-color="#c4b5fd"/>
+      <stop offset="30%" stop-color="#a855f7"/>
+      <stop offset="65%" stop-color="#e879f9"/>
+      <stop offset="100%" stop-color="#fb7185"/>
+    </linearGradient>
+    <radialGradient id="bgWash" cx="50%" cy="40%" r="65%">
+      <stop offset="0%" stop-color="#a855f7" stop-opacity="0.30"/>
+      <stop offset="100%" stop-color="#a855f7" stop-opacity="0"/>
     </radialGradient>
-    <linearGradient id="shieldFill" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#ffb199"/>
-      <stop offset="42%" stop-color="#f0455c"/>
-      <stop offset="100%" stop-color="#b3184a"/>
-    </linearGradient>
-    <linearGradient id="pulseGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#fff6ee"/>
-      <stop offset="100%" stop-color="#ffd9c7"/>
-    </linearGradient>
-    <filter id="softGlow" x="-60%" y="-60%" width="220%" height="220%">
-      <feGaussianBlur stdDeviation="9" result="blur"/>
-      <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
   </defs>
 
   <rect width="480" height="480" rx="96" fill="#0a0a0a"/>
   <rect x="1" y="1" width="478" height="478" rx="95" fill="none" stroke="#27272a" stroke-width="2"/>
 
-  <!-- flare burst — rays radiating outward, the "Flare" half of the mark -->
-  <g stroke="#f0455c" stroke-linecap="round" opacity="0.55">
-    <line x1="240" y1="34" x2="240" y2="78" stroke-width="6"/>
-    <line x1="240" y1="402" x2="240" y2="446" stroke-width="6"/>
-    <line x1="34" y1="240" x2="78" y2="240" stroke-width="6"/>
-    <line x1="402" y1="240" x2="446" y2="240" stroke-width="6"/>
-    <line x1="94" y1="94" x2="124" y2="124" stroke-width="5"/>
-    <line x1="356" y1="356" x2="386" y2="386" stroke-width="5"/>
-    <line x1="386" y1="94" x2="356" y2="124" stroke-width="5"/>
-    <line x1="124" y1="356" x2="94" y2="386" stroke-width="5"/>
-  </g>
+  <!-- faint wash, not a glow effect — same family as the gradient below it -->
+  <circle cx="240" cy="214" r="210" fill="url(#bgWash)"/>
 
-  <!-- warm glow seated behind the shield -->
-  <circle cx="240" cy="214" r="196" fill="url(#glow)"/>
-
-  <!-- shield — filled with gradient this time, not just an outline. the "Sentinel" half -->
+  <!-- shield, same gradient family as the wash behind it -->
   <path d="M240 92 L364 138 V250 C364 318 314 366 240 392 C166 366 116 318 116 250 V138 Z"
-        fill="url(#shieldFill)"/>
-  <path d="M240 92 L364 138 V250 C364 318 314 366 240 392 C166 366 116 318 116 250 V138 Z"
-        fill="none" stroke="#ffe3d6" stroke-width="3" opacity="0.55"/>
+        fill="url(#flareGrad)"/>
 
-  <!-- glowing pulse line inside the shield -->
+  <!-- pulse line — flat, no blur, same stroke weight discipline as the rays outside -->
   <path d="M158 214 L204 214 L230 288 L268 174 L294 250 L322 250"
-        fill="none" stroke="url(#pulseGrad)" stroke-width="16"
-        stroke-linecap="round" stroke-linejoin="round" filter="url(#softGlow)"/>
+        fill="none" stroke="#0a0a0a" stroke-width="16"
+        stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
