@@ -75,19 +75,27 @@ An earlier version of this contract only ever set a boolean. That's thin for a t
 
 ## Proof
 
-**The agent's own judgment call, from a live run in the gray zone.** This is the branch that
-actually matters — the case the contract can't resolve on its own, so it hands the real numbers to
-Claude and waits for a verdict:
+**The full run shown in the demo video** — deposit through a genuine gray-zone agent call to a
+normal withdrawal, all on Coston2, in order:
 
-> Deviation was 3 bips against a 3-bip threshold — the very bottom of the gray zone. Claude's
-> verdict: `severity: medium`, `action: INCREASE_MONITORING`, reasoning that "a 0.01–0.03% move is
-> within ordinary tick noise" and that locking here "would be a clearly premature freeze of the
-> only action the vault actually enforces onchain." No state changed — recorded onchain via
-> `AgentResponded` only. Run twice independently (thresholds 3 and 1 bips), same conclusion both
-> times, each time citing the actual numbers rather than a template answer.
+| Step | What happened | Transaction |
+|---|---|---|
+| 1. Deposit | 10 C2FLR into the vault | [`0x71874ee5…`](https://coston2-explorer.flare.network/tx/0x71874ee5bd0db4f73a86ba3066076a1a0534450a10ea940bd2b49800f5dd99af) |
+| 2. Deploy the watch | `setPolicy(XRP/USD, 5 bips)`, anchor `1.004423` | [`0xc67a6b9b…`](https://coston2-explorer.flare.network/tx/0xc67a6b9b2a55387e5fc969017c28e6d98e7addfa27ca53c00b377f77a39c2ad3) |
+| 3. Contract checks itself | Real XRP/USD moved to `1.003806` — 6 bips of deviation, inside the 5–10 bip gray zone | [`0x52640ebc…`](https://coston2-explorer.flare.network/tx/0x52640ebc5c59f9a96e8534318997851686bab272ad06e3f9e15c4d1eab3e3198) |
+| 4. Agent decides | Claude: `severity: medium`, `action: INCREASE_MONITORING` — reasoning that 6 of the 10 bips needed for an automatic lock is "the shallow end of the gray zone... a single FTSO update of ordinary magnitude can cross it," so this reads as "early, low-conviction drift rather than a directional breakdown" | Real Anthropic API call, `claude-opus-5` |
+| 5. Execute | `INCREASE_MONITORING` changes no contract state — recorded via `AgentResponded` only, no transaction sent | — |
+| 6. Confirm the state | `isLocked: false` | — |
+| 7. Test the exit | Not locked, so `withdraw(10)` succeeds normally | [`0x8a273540…`](https://coston2-explorer.flare.network/tx/0x8a2735407f8c1a55b06fa777437de60e15d436f4d329573ae5a57f502bbcaa73) |
 
-**The other real branch — the contract defending itself, with zero LLM calls.** A full cycle, run
-live on Coston2, in order:
+The model's full reasoning also weighed and rejected the other six actions by name — `LOCK_POSITION`
+as premature at this depth, `NO_ACTION` as wrong because the escalation was real, `ACCELERATE_ORACLE`
+as unjustified, and the fund-moving actions as not applicable to a contract that doesn't act on them
+yet — the kind of specificity a templated response doesn't produce.
+
+**A second real branch, from an earlier run — the contract defending itself, with zero LLM calls.**
+Included because it's the other half of the three-tier design, even though the video centers the
+agent's judgment:
 
 | Step | What happened | Transaction |
 |---|---|---|
