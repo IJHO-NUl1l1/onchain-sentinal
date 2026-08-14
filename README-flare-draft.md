@@ -22,6 +22,20 @@ Same two things as the KeeperHub track. Everything else is decoration.
 
 ---
 
+## What it does, in seven steps
+
+| # | Step | What actually runs |
+|---|------|--------------------|
+| 1 | **Deposit real funds** | `deposit()` on `SentinelVault.sol` — native C2FLR, a real balance the rest of the run protects. |
+| 2 | **Deploy the watch** | `setPolicy()` anchors the live FTSOv2 XRP/USD price at that exact moment. |
+| 3 | **Contract checks itself** | Permissionless `checkAndExecute()` — the contract alone sorts the case into normal / gray-zone / immediate-defense. |
+| 4 | **Agent decides** *(gray zone only)* | Real deviation data goes to Claude; it answers with one of seven predefined actions. Skipped entirely if the contract already resolved it. |
+| 5 | **Execute** | `agentRespond()` — only `LOCK_POSITION` changes state today; every choice is still recorded onchain. |
+| 6 | **Confirm the state moved** | Re-reads `policies()` — a defense that didn't change `isLocked` didn't happen. |
+| 7 | **Test the exit** | `withdraw()` — reverts with `PositionLocked` if locked, succeeds otherwise. The real proof this isn't a flag. |
+
+---
+
 ## What's different here: judgment is pre-filtered onchain, not always invoked
 
 The KeeperHub track calls the agent every time. This one doesn't have to — `SentinelVault.sol`
@@ -56,7 +70,19 @@ An earlier version of this contract only ever set a boolean. That's thin for a t
 
 ## Proof
 
-A full cycle, run live on Coston2, in order:
+**The agent's own judgment call, from a live run in the gray zone.** This is the branch that
+actually matters — the case the contract can't resolve on its own, so it hands the real numbers to
+Claude and waits for a verdict:
+
+> Deviation was 3 bips against a 3-bip threshold — the very bottom of the gray zone. Claude's
+> verdict: `severity: medium`, `action: INCREASE_MONITORING`, reasoning that "a 0.01–0.03% move is
+> within ordinary tick noise" and that locking here "would be a clearly premature freeze of the
+> only action the vault actually enforces onchain." No state changed — recorded onchain via
+> `AgentResponded` only. Run twice independently (thresholds 3 and 1 bips), same conclusion both
+> times, each time citing the actual numbers rather than a template answer.
+
+**The other real branch — the contract defending itself, with zero LLM calls.** A full cycle, run
+live on Coston2, in order:
 
 | Step | What happened | Transaction |
 |---|---|---|
@@ -67,11 +93,8 @@ A full cycle, run live on Coston2, in order:
 | 5. Unlock | The user, not the agent, chooses to release it | [`0xddb6e089…`](https://coston2-explorer.flare.network/tx/0xddb6e0891051d5ef8e9da0b6e39451b68301c7b69c20ac2ce67d99954ec837ab) |
 | 6. Test the exit, unlocked | `withdraw(5)` succeeds — same function, same funds, only the lock changed | [`0x4d0102ae…`](https://coston2-explorer.flare.network/tx/0x4d0102aeb52ad45a0e458fb1360f3f3176ae3fd05c63f94364539a4a58fb5815) |
 
-Two earlier live runs on this same policy landed in the gray zone instead and were consulted to
-Claude directly — both real, both genuinely reasoned, both correctly judged a sub-2-bip move as
-noise rather than a threat (`INCREASE_MONITORING`, no state change, `AgentResponded` event only).
-The immediate-defense run above is the other real branch of the same three-tier design: the
-contract needed no help this time, because the case wasn't ambiguous.
+Same contract, same policy design, two different real outcomes depending only on how far the price
+actually moved — nothing about which branch fires is scripted per run.
 
 **Contract addresses:**
 
