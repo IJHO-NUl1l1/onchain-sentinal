@@ -142,6 +142,16 @@ export function FlareConsole() {
     if (pollRef.current) clearInterval(pollRef.current);
   }
 
+  /**
+   * tier=normal은 "아직 때가 아니다"이지 실패가 아니다. 정책(anchor)은 그대로 두고 2막만 되돌려
+   * 관찰을 재개한다 — 이게 없으면 타이밍을 한 번 놓칠 때마다 새로고침 후 처음부터 다시 해야 한다.
+   */
+  function resumeWatching() {
+    setCheck({ status: "idle" });
+    setTier(null);
+    startWatching();
+  }
+
   async function runCheck() {
     stopWatching();
     setCheck({ status: "running" });
@@ -336,14 +346,44 @@ export function FlareConsole() {
                   )}
                 </div>
               )}
+              {/* 커밋 버튼은 관찰을 시작한 뒤에만 나타난다 — 이탈률을 보지 않고 누르면
+                  임계 밖에서 tx를 낭비하고, 화면엔 tier=normal만 찍혀 데모가 끊긴다. */}
+              {watching && (
+                <div className="space-y-2">
+                  <button
+                    onClick={runCheck}
+                    className={`rounded-md px-4 py-2 text-xs font-medium ${
+                      peek?.readyToCommit
+                        ? "bg-emerald-600 text-white hover:bg-emerald-500"
+                        : "border border-zinc-700 text-zinc-300 hover:border-zinc-500"
+                    }`}
+                  >
+                    Run checkAndExecute now
+                  </button>
+                  {peek && !peek.readyToCommit && (
+                    <p className="font-mono text-[11px] text-zinc-600">
+                      Below the threshold — running now would return{" "}
+                      <span className="text-zinc-400">normal</span> and the agent would never be
+                      reached. Waiting costs nothing.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {tier === "normal" && (
+            <div className="mt-4">
+              <p className="text-xs text-zinc-500">
+                The contract read the price and decided nothing needed doing. That is the outcome
+                on most calls, and it is the one a guardian should reach most often — the agent is
+                never consulted here.
+              </p>
               <button
-                onClick={runCheck}
-                disabled={!watching}
-                className={`rounded-md px-4 py-2 text-xs font-medium disabled:opacity-40 ${
-                  peek?.readyToCommit ? "bg-emerald-600 text-white hover:bg-emerald-500" : "border border-zinc-700 text-zinc-300 hover:border-zinc-500"
-                }`}
+                onClick={resumeWatching}
+                className="mt-3 rounded-md border border-zinc-700 px-4 py-2 text-xs font-medium text-zinc-300 hover:border-zinc-500"
               >
-                Run checkAndExecute now
+                Keep watching
               </button>
             </div>
           )}
