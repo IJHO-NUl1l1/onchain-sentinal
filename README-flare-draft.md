@@ -8,6 +8,11 @@ Agents can think. This is the Flare-native proof that the judgment/execution bou
 is built on doesn't need a third-party executor at all — it can live entirely onchain, with the
 LLM only consulted for the cases a contract genuinely can't resolve on its own.
 
+**Who this is for:** anyone holding a position denominated in an interoperable asset (XRP today,
+FXRP once FAssets minting is live) who wants it watched and defended without staring at a price
+chart — and, more broadly, builders who want a pattern for onchain guardians that don't call an
+LLM for every check, only the ones that are actually ambiguous.
+
 ---
 
 ## The bar we held ourselves to
@@ -178,6 +183,54 @@ with its Turnkey wallet, for the same reason: whoever can sign is whoever the de
 **This is Coston2, a testnet.** C2FLR has no market value. What's real is the mechanism: a genuine
 deposit, a genuine FTSO price, a genuine model call, and a genuine revert when the exit is locked —
 none of it simulated. Moving this to Flare mainnet is a network config change, not a rewrite.
+
+---
+
+## What existed before this program vs. what's new on Flare
+
+Onchain Sentinel started as a KeeperHub-track submission: a wallet address goes in, an LLM reads
+its real Aave v3 position and defends it through KeeperHub's execution infrastructure. That's where
+the shared "brain" — `analyzer` → `prompt` → `claude`, and the `Executor` interface it talks
+through — was built, before any Flare-specific work started.
+
+**Built new, for Flare, during this program:**
+- `SentinelVault.sol` itself — the three-tier judgment contract (normal / gray-zone / immediate-
+  defense), deployed and iterated on Coston2
+- `FlareExecutor` — the second real implementation of the same `Executor` interface KeeperHub uses,
+  proving the boundary is a property of the code, not a claim about one integration
+- Real asset custody (`deposit` / `withdraw` / the `PositionLocked` revert) — added after the first
+  version only ever set a flag, specifically because a track called *Interoperable Asset Products*
+  should touch an asset
+- `flare-diagnoser.md` / `flare-strategist.md` and `buildFlareAgentPrompt()` — the FTSO-specific
+  half of the prompt layer, sitting next to the KeeperHub one but reasoning about price deviation
+  instead of a lending position
+- The `/flare` console — its own five-through-seven-act UI, not a reskin of the KeeperHub one
+- The XRP/USD integration itself — verified against Flare's own FTSOv2 feed list before wiring it
+  in, not assumed
+
+**Ported/reused unchanged:** `parseVerdict()` and the seven-action enum are the literal same
+function and the same TypeScript union the KeeperHub track validates against — nothing was
+duplicated to make the Flare track work.
+
+**Why the new work matters:** it's the difference between "we called an LLM once" and "judgment and
+execution are separated as a general pattern, portable across chains and executors." The Flare
+track is what makes that a claim about the architecture rather than about one integration.
+
+---
+
+## Roadmap
+
+- **FAssets integration once minting is live** — the vault already watches any FTSOv2 feed with no
+  code change; pointing it at an actual FXRP price (once one exists) instead of plain XRP/USD is a
+  configuration change, not new code.
+- **Fund `SUPPLY_COLLATERAL` / `WITHDRAW_COLLATERAL` / `REPAY_DEBT` with real logic** — today they're
+  recorded recommendations only; the natural next step is a lending-style position (deposit +
+  borrow, mirroring the KeeperHub track's Aave shape) so those three actions have something to act on.
+- **A permissionless keeper bot** for `checkAndExecute()` — right now our own scripts call it;
+  the function is designed to be called by anyone, and a public keeper is what makes the watch
+  actually unattended.
+- **Flare mainnet** — the only blocker is swapping the network config; `getFtsoV2()` replaces the
+  free `getTestFtsoV2()` used here for development.
 
 ---
 
