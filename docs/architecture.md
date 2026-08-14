@@ -329,11 +329,29 @@ Aave v4는 대안이 아니다 — Ethereum 메인넷만 지원(L2 없음), 그�
 - Feed ID: FLR/USD `0x01464c522f...`, BTC/USD `0x014254432f...`, ETH/USD `0x014554482f...`
 - 주소(Coston2): FtsoV2 `0x3d893C53D9e8056135C26C8c638B76C8b60Df726`, FeeCalculator `0x88A9315f96c9b5518BBeC58dC6a914e13fAb13e2`
 
-**✅ SentinelVault.sol 배포 완료 (8/9, Coston2):**
-- 주소: `0xBf5778109e894b7C093D91B8a7518c95Fe74c3EF` — 제출물 "smart contract address"란에 이 값
-- agent(`agentRespond` 화이트리스트): `0x6Bc68c3C6d4D9B02E435dF25bBc22E59541C809c`
-- 익스플로러: https://coston2-explorer.flare.network/address/0xBf5778109e894b7C093D91B8a7518c95Fe74c3EF
-- `eth_getCode`로 실제 bytecode 존재 확인(빈 응답 아님)
+**⚠️ SentinelVault는 배포본이 두 개다 (8/14 기준). 어느 쪽을 쓸지 먼저 정해야 한다.**
+
+| | v1 (8/9 배포) | **v2 (8/14 배포, 커스터디 추가)** |
+|---|---|---|
+| 주소 | `0xBf5778109e894b7C093D91B8a7518c95Fe74c3EF` | `0x1288516DcE1642952d1e3eB79504F496edb38D31` |
+| 크기 | 3,893 bytes | 5,268 bytes |
+| 자산 보유 | ❌ 없음 (`isLocked`는 플래그일 뿐) | ✅ `deposit`/`withdraw`/`balances` |
+| 라이브 검증 | ✅ **지금까지의 모든 실증 tx가 여기서 나왔다** | ❌ **아직 한 번도 안 돌려봄** |
+| 정책·자금 | 있음 | 정책 없음, 잔고 0 |
+
+- agent(`agentRespond` 화이트리스트, 양쪽 동일): `0x6Bc68c3C6d4D9B02E435dF25bBc22E59541C809c`
+- v1 익스플로러: https://coston2-explorer.flare.network/address/0xBf5778109e894b7C093D91B8a7518c95Fe74c3EF
+- v2 익스플로러: https://coston2-explorer.flare.network/address/0x1288516DcE1642952d1e3eB79504F496edb38D31
+- 둘 다 `eth_getCode`로 bytecode 존재 확인함
+
+**v2를 만든 이유 (8/14):** v1은 자산을 보유하지 않아서 `LOCK_POSITION`이 `bool` 하나를 바꾸고
+이벤트를 남기는 게 전부였다. Flare 바운티가 **Interoperable Asset Products**라 "자산 제품인데
+자산을 안 건드린다"가 약점이었다. v2는 네이티브 C2FLR을 실제로 예치받고, **정책이 잠기면
+`withdraw()`가 `PositionLocked`로 revert**한다 — 방어가 신호가 아니라 자금의 출구를 막는 조건이 된다.
+
+**⚠️ 코드는 이미 v2를 가리키도록 바꿔놨다**(`app/executors/flare.ts`, `flare-console.tsx`,
+`contracts/scripts/demo-provision-and-check.ts`, `.env.example`). 되돌리려면 그 4개 파일에서
+주소를 v1으로 sed 치환하면 끝난다.
 
 **✅ §0-1 두 축 Flare 버전 실증 완료 (8/9):** `npm run demo:coston2`(contracts/) —
 `setPolicy(FLR/USD, 5%)` → 실제 FTSO 가격을 anchorPrice로 기록(여러 번 실행할 때마다

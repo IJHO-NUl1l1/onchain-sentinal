@@ -11,7 +11,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import { flareTestnet } from "viem/chains";
 import type { Action, Executor, MonitoringProfile, ProvisionResult, TxResult } from "./types";
 
-const VAULT_ADDRESS = "0xBf5778109e894b7C093D91B8a7518c95Fe74c3EF";
+const VAULT_ADDRESS = "0x1288516DcE1642952d1e3eB79504F496edb38D31";
 const EXPLORER = "https://coston2-explorer.flare.network";
 // Throwaway verifier contract — reads any FTSO feed via ContractRegistry.getTestFtsoV2(),
 // the same path SentinelVault.sol uses. Free (view), used to watch deviation without
@@ -99,6 +99,34 @@ const vaultAbi = [
       { name: "currentPrice", type: "uint256", indexed: false },
       { name: "deviationBips", type: "uint256", indexed: false },
     ],
+  },
+  {
+    type: "function",
+    name: "deposit",
+    stateMutability: "payable",
+    inputs: [],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "withdraw",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "amount", type: "uint256" }],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "balances",
+    stateMutability: "view",
+    inputs: [{ name: "user", type: "address" }],
+    outputs: [{ name: "amount", type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "unlock",
+    stateMutability: "nonpayable",
+    inputs: [],
+    outputs: [],
   },
 ] as const;
 
@@ -328,4 +356,86 @@ export async function checkPolicy(user: string): Promise<CheckResult> {
   }
 
   return { tier: "normal", policy };
+}
+
+/** 금고가 이 주소를 위해 실제로 들고 있는 C2FLR (wei). */
+export async function readVaultBalance(user: string): Promise<string> {
+  const { pub } = clients();
+  const balance = await pub.readContract({
+    address: VAULT_ADDRESS,
+    abi: vaultAbi,
+    functionName: "balances",
+    args: [user as Hex],
+  });
+  return balance.toString();
+}
+
+/** 금고에 예치한다. 이게 감시·방어의 대상이 되는 실제 자산이다. */
+export async function depositToVault(amountWei: bigint): Promise<{ transactionLink: string; balance: string }> {
+  const { wallet, pub, account } = clients();
+  const hash = await wallet.writeContract({
+    address: VAULT_ADDRESS,
+    abi: vaultAbi,
+    functionName: "deposit",
+    value: amountWei,
+    gas: GAS_LIMIT,
+  });
+  await pub.waitForTransactionReceipt({ hash });
+  return { transactionLink: `${EXPLORER}/tx/${hash}`, balance: await readVaultBalance(account.address) };
+}
+
+/**
+ * 인출을 시도한다. 정책이 잠겨 있으면 컨트랙트가 되돌린다 — 방어가 실제로 자금을 막는지
+ * 화면에서 증명하는 용도라, 실패를 예외가 아니라 결과로 돌려준다.
+ */
+export async function tryWithdraw(amountWei: bigint): Promise<{
+  ok: boolean;
+  transactionLink?: string;
+  revertReason?: string;
+  balance: string;
+}> {
+  const { wallet, pub, account } = clients();
+  try {
+    // simulate가 먼저 걸러준다 — 잠겨 있으면 가스를 쓰지 않고 revert 사유를 알 수 있다.
+    await pub.simulateContract({
+      address: VAULT_ADDRESS,
+      abi: vaultAbi,
+      functionName: "withdraw",
+      args: [amountWei],
+      account,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    const reason = /PositionLocked/.test(message)
+      ? "PositionLocked — the vault refuses to release funds while the policy is locked"
+      : message.split("\n")[0];
+    return { ok: false, revertReason: reason, balance: await readVaultBalance(account.address) };
+  }
+
+  const hash = await wallet.writeContract({
+    address: VAULT_ADDRESS,
+    abi: vaultAbi,
+    functionName: "withdraw",
+    args: [amountWei],
+    gas: GAS_LIMIT,
+  });
+  await pub.waitForTransactionReceipt({ hash });
+  return {
+    ok: true,
+    transactionLink: `${EXPLORER}/tx/${hash}`,
+    balance: await readVaultBalance(account.address),
+  };
+}
+
+/** 사용자가 스스로 방어를 해제한다. 리허설 리셋용이자 "자산을 인질로 잡지 않는다"의 증거. */
+export async function unlockPosition(): Promise<{ transactionLink: string }> {
+  const { wallet, pub } = clients();
+  const hash = await wallet.writeContract({
+    address: VAULT_ADDRESS,
+    abi: vaultAbi,
+    functionName: "unlock",
+    gas: GAS_LIMIT,
+  });
+  await pub.waitForTransactionReceipt({ hash });
+  return { transactionLink: `${EXPLORER}/tx/${hash}` };
 }

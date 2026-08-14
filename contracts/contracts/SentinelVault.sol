@@ -2,6 +2,7 @@
 pragma solidity ^0.8.25;
 
 // FTSO 가격 피드로 하락을 감지해 스스로 방어하는 금고. architecture.md §2 참조.
+// 실제로 네이티브 자산(C2FLR)을 보관한다 — 방어가 플래그가 아니라 자금 동결로 이어진다.
 // ⚠️ 개발망(Coston2)이라 getTestFtsoV2()(view, 가스無) 사용 — 메인넷은 getFtsoV2()(payable).
 
 import { TestFtsoV2Interface } from "@flarenetwork/flare-periphery-contracts/coston2/TestFtsoV2Interface.sol";
@@ -32,13 +33,22 @@ contract SentinelVault {
 
     mapping(address user => Policy policy) public policies;
 
+    /// 이 금고가 실제로 들고 있는 예치금. 방어가 발동하면 여기서 나가는 길이 막힌다.
+    mapping(address user => uint256 amount) public balances;
+
     event PolicySet(address indexed user, bytes21 feedId, uint256 anchorPrice, uint256 thresholdBips);
     event ImmediateDefense(address indexed user, uint256 currentPrice, uint256 deviationBips);
     event EscalationRequested(address indexed user, uint256 currentPrice, uint256 deviationBips);
     event AgentResponded(address indexed user, ActionType action);
+    event Deposited(address indexed user, uint256 amount, uint256 newBalance);
+    event Withdrawn(address indexed user, uint256 amount, uint256 newBalance);
 
     error NotAgent();
     error PolicyNotFound();
+    error PositionLocked();
+    error InsufficientBalance();
+    error TransferFailed();
+    error NothingToDeposit();
 
     modifier onlyAgent() {
         if (msg.sender != agent) revert NotAgent();
@@ -47,6 +57,30 @@ contract SentinelVault {
 
     constructor(address _agent) {
         agent = _agent;
+    }
+
+    /// 금고에 네이티브 자산을 예치한다. 이게 감시·방어의 대상이 되는 실제 포지션이다.
+    function deposit() external payable {
+        if (msg.value == 0) revert NothingToDeposit();
+        balances[msg.sender] += msg.value;
+        emit Deposited(msg.sender, msg.value, balances[msg.sender]);
+    }
+
+    /**
+     * 예치금 인출. **정책이 잠겨 있으면 실패한다** — 에이전트(또는 컨트랙트 자신)의 방어 판정이
+     * 여기서 실제 효력을 갖는다. `isLocked`는 기록용 플래그가 아니라 자금의 출구를 막는 조건이다.
+     * 사용자는 `unlock()`으로 스스로 풀 수 있다(우리가 자산을 인질로 잡지 않는다).
+     */
+    function withdraw(uint256 amount) external {
+        Policy storage policy = policies[msg.sender];
+        if (policy.exists && policy.isLocked) revert PositionLocked();
+        if (balances[msg.sender] < amount) revert InsufficientBalance();
+
+        balances[msg.sender] -= amount;
+        (bool ok, ) = msg.sender.call{ value: amount }("");
+        if (!ok) revert TransferFailed();
+
+        emit Withdrawn(msg.sender, amount, balances[msg.sender]);
     }
 
     /// 감시망 설치. 현재 가격을 기준점으로 잡는다.

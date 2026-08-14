@@ -6,7 +6,7 @@ import { network } from "hardhat";
 // 더 비싼 코드 경로를 타 자동 gas estimate가 빗나간다(out-of-gas). 항상 명시적 gasLimit을 준다.
 
 const FLR_USD_FEED_ID = "0x01464c522f55534400000000000000000000000000"; // "FLR/USD", 21 bytes
-const VAULT_ADDRESS = "0xBf5778109e894b7C093D91B8a7518c95Fe74c3EF";
+const VAULT_ADDRESS = "0x1288516DcE1642952d1e3eB79504F496edb38D31";
 const CHECK_GAS_LIMIT = 300_000n;
 
 async function main() {

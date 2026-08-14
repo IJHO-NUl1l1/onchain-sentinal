@@ -20,7 +20,7 @@ import { Step, type Row, type Status } from "./step";
 // setPolicy에 onBehalfOf가 없어서 정책은 항상 서버 키(msg.sender)에 귀속된다 — KeeperHub 콘솔과
 // 달리 지갑 주소를 사용자가 입력할 수 없다. architecture.md §8-3 8/13 실증 참조.
 const POLICY_OWNER = "0x6Bc68c3C6d4D9B02E435dF25bBc22E59541C809c";
-const VAULT_ADDRESS = "0xBf5778109e894b7C093D91B8a7518c95Fe74c3EF";
+const VAULT_ADDRESS = "0x1288516DcE1642952d1e3eB79504F496edb38D31";
 const EXPLORER = "https://coston2-explorer.flare.network";
 const PEEK_INTERVAL_MS = 3000;
 
