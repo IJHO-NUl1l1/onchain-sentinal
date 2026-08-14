@@ -160,7 +160,7 @@ export function FlareConsole() {
           label: "Feed",
           value: "XRP/USD",
           strong: true,
-          hint: "Real FTSOv2 feed — the asset Flare's FAssets bridges onto the chain.",
+          hint: "A real feed on FTSOv2's official list. XRP is the asset FAssets targets, so this is the closest live proxy for an interoperable asset's price — no FXRP feed exists yet.",
         },
         {
           label: "Anchor price",
